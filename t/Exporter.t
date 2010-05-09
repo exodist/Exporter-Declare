@@ -7,7 +7,7 @@ use Test::Exception::LessClever;
 
 use_ok( "Exporter::Declare" );
 BEGIN {
-    use Exporter::Declare::Parser;
+    use Devel::Declare::Parser;
 }
 
 BEGIN {

@@ -9,11 +9,11 @@ my $build = Module::Build->new(
     dist_author => 'Chad Granum <exodist7@gmail.com>',
     create_readme => 1,
     requires => {
-        'B::Compiling' => 0.02,
-        'B::Hooks::EndOfScope' => 0.08,
-        'Devel::Declare' => 0.006000,
+        'Devel::Declare::Parser' => 0.011,
         'Test::Exception::LessClever' => 0,
         'Test::Simple' => 0.88,
+        'Carp' => 0,
+        'Scalar::Util' => 0,
     },
     meta_merge => {
         resources => {

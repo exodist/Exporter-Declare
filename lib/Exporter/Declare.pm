@@ -4,9 +4,9 @@ use warnings;
 
 use Carp;
 use Scalar::Util qw/blessed/;
-use Exporter::Declare::Parser;
+use Devel::Declare::Parser;
 
-our $VERSION = 0.006;
+our $VERSION = 0.011;
 our @CARP_NOT = ( __PACKAGE__ );
 export( 'export', 'export' );
 
@@ -100,7 +100,7 @@ sub export {
 
     my $rclass;
     if ( $parser ) {
-        $rclass = Exporter::Declare::Parser->get_parser($parser);
+        $rclass = Devel::Declare::Parser->get_parser($parser);
         croak( "'$parser' is not a valid parser, did you forget to load the class that provides it?" )
             unless $rclass;
     }
@@ -144,10 +144,8 @@ export anonymous subs under whatever name you want. You can also extend
 Exporter::Declare very easily.
 
 Exporter-Declare also provides a friendly interface to L<Devel::Declare> magic.
-With Exporter-Declare and its parser library, you can write L<Devel::Declare>
-enhanced functions without directly using Devel-Declare. If no available parser
-meets your needs you can subclass L<Exporter::Declare::Parser> which provides a
-higher-level interface to L<Devel::Declare>
+With L<Devel::Declare::Parser> and its parser library, you can write
+L<Devel::Declare> enhanced functions without directly using Devel-Declare.
 
 =head1 BASIC SYNOPSIS
 
@@ -361,30 +359,30 @@ subs.
 
 =head2 Writing custom parsers
 
-See L<Exporter::Declare::Parser>
+See L<Devel::Declare::Parser>
 
 =head2 Provided Parsers
 
 =over 4
 
-=item L<Exporter::Declare::Parser::Export>
+=item L<Devel::Declare::Parser::Export>
 
 Used for functions that export, accepting a name, a parser, and options.
 
-=item L<Exporter::Declare::Parser::Sublike>
+=item L<Devel::Declare::Parser::Sublike>
 
 Things that act like 'sub name {}'
 
-=item L<Exporter::Declare::Parser::Method>
+=item L<Devel::Declare::Parser::Method>
 
 Same ad Sublike except codeblocks have $self automatically shifted off.
 
-=item L<Exporter::Declare::Parser::Codeblock>
+=item L<Devel::Declare::Parser::Codeblock>
 
 Things that take a single codeblock as an arg. Like defining sub mysub(&)
 except that you do not need a semicolon at the end.
 
-=item L<Exporter::Declare::Parser::Begin>
+=item L<Devel::Declare::Parser::Begin>
 
 Define a sub that works like 'use' in that it runs at compile time (like
 wrapping it in BEGIN{})

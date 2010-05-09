@@ -8,11 +8,8 @@ DESCRIPTION
     also extend Exporter::Declare very easily.
 
     Exporter-Declare also provides a friendly interface to Devel::Declare
-    magic. With Exporter-Declare and its parser library, you can write
+    magic. With Devel::Declare::Parser and its parser library, you can write
     Devel::Declare enhanced functions without directly using Devel-Declare.
-    If no available parser meets your needs you can subclass
-    Exporter::Declare::Parser which provides a higher-level interface to
-    Devel::Declare
 
 BASIC SYNOPSIS
     If you want to avoid magic you can still easily declare exports:
@@ -200,25 +197,25 @@ Extending (Writing your own Exporter-Declare)
 
 PARSERS
   Writing custom parsers
-    See Exporter::Declare::Parser
+    See Devel::Declare::Parser
 
   Provided Parsers
-    Exporter::Declare::Parser::Export
+    Devel::Declare::Parser::Export
         Used for functions that export, accepting a name, a parser, and
         options.
 
-    Exporter::Declare::Parser::Sublike
+    Devel::Declare::Parser::Sublike
         Things that act like 'sub name {}'
 
-    Exporter::Declare::Parser::Method
+    Devel::Declare::Parser::Method
         Same ad Sublike except codeblocks have $self automatically shifted
         off.
 
-    Exporter::Declare::Parser::Codeblock
+    Devel::Declare::Parser::Codeblock
         Things that take a single codeblock as an arg. Like defining sub
         mysub(&) except that you do not need a semicolon at the end.
 
-    Exporter::Declare::Parser::Begin
+    Devel::Declare::Parser::Begin
         Define a sub that works like 'use' in that it runs at compile time
         (like wrapping it in BEGIN{})
 
