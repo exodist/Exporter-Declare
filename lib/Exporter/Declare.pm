@@ -6,8 +6,9 @@ use Carp;
 use Scalar::Util qw/blessed/;
 use Devel::Declare::Parser;
 
-our $VERSION = 0.011;
+our $VERSION = 0.012;
 our @CARP_NOT = ( __PACKAGE__ );
+our %PARSERS = ( export => Devel::Declare::Parser->get_parser('export'));
 export( 'export', 'export' );
 
 sub import {
