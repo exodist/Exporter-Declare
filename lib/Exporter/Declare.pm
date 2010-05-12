@@ -4,11 +4,11 @@ use warnings;
 
 use Carp;
 use Scalar::Util qw/blessed/;
-use Devel::Declare::Parser;
+use Devel::Declare::Interface;
 
-our $VERSION = 0.012;
+our $VERSION = 0.014;
 our @CARP_NOT = ( __PACKAGE__ );
-our %PARSERS = ( export => Devel::Declare::Parser->get_parser('export'));
+our %PARSERS = ( export => Devel::Declare::Interface::get_parser('export'));
 export( 'export', 'export' );
 
 sub import {
@@ -76,7 +76,7 @@ sub export_to {
         }
         my $parser = $parsers->{ $name };
         next unless $parser;
-        $parser->enhance( $dest, $name );
+        Devel::Declare::Interface::enhance( $dest, $name, $parser );
     }
 }
 
@@ -99,13 +99,6 @@ sub export {
     croak( "No code found in '$exporter' for exported sub '$name'" )
         unless $sub;
 
-    my $rclass;
-    if ( $parser ) {
-        $rclass = Devel::Declare::Parser->get_parser($parser);
-        croak( "'$parser' is not a valid parser, did you forget to load the class that provides it?" )
-            unless $rclass;
-    }
-
     my $export;
     my $parsers;
     {
@@ -115,7 +108,7 @@ sub export {
         $parsers = \%{ $exporter . '::PARSERS' };
     }
     $export->{ $name } = $sub;
-    $parsers->{ $name } = $rclass if $rclass;
+    $parsers->{ $name } = $parser if $parser;
 }
 
 package Exporter::Declare::Base;
