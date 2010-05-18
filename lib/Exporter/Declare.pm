@@ -5,8 +5,9 @@ use warnings;
 use Carp;
 use Scalar::Util qw/blessed/;
 use Devel::Declare::Interface;
+use Exporter::Declare::Export;
 
-our $VERSION = 0.014;
+our $VERSION = 0.016;
 our @CARP_NOT = ( __PACKAGE__ );
 our %PARSERS = ( export => Devel::Declare::Interface::get_parser('export'));
 export( 'export', 'export' );

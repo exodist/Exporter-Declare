@@ -57,12 +57,23 @@ BEGIN {
 
     export l { 100 }
 
-    throws_ok { eval ' export z z { 1 } 1' || die $@ }
-    qr/No parser found for z at/,
-    "Invalid parser";
+    export z z { 1 }
 
     sub f { 'f' }
 };
+
+{
+    package USE_NORMALUSE;
+    use strict;
+    use warnings;
+    use Test::More;
+    use Test::Exception::LessClever;
+    BEGIN{ NormalUse->import };
+
+    throws_ok { eval 'z(); 1' || die($@) }
+    qr/No parser found for z at/,
+    "Invalid parser";
+}
 
 use Exporter::Declare;
 
@@ -98,7 +109,7 @@ isa_ok( 'UseExtended', 'Exporter::Declare' );
 isa_ok( 'UseExtended', 'Exporter::Declare::Base' );
 is_deeply(
     [ sort keys %{ NormalUse->exports }],
-    [ 'e', 'f', 'l', 'x', 'y', ],
+    [ 'e', 'f', 'l', 'x', 'y', 'z' ],
     "Exports in normal use",
 );
 

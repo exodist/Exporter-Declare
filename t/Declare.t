@@ -23,8 +23,8 @@ BEGIN {
     export pear ( inject => 'my $pear = "pear";' ) { $pear }
 
     export eexport export ( inject => 'my $inject = 1;' ) {
-        is( $name, "name", "got name" );
-        is( $parser, "export", "got parser" );
+        is( $_[0], "name", "got name" );
+        is( $_[1], "export", "got parser" );
         is( $inject, 1, "injected" );
     }
 }
