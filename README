@@ -11,16 +11,28 @@ DESCRIPTION
     magic. With Devel::Declare::Parser and its parser library, you can write
     Devel::Declare enhanced functions without directly using Devel-Declare.
 
-BASIC SYNOPSIS
-    If you want to avoid magic you can still easily declare exports:
+    Exporter-Declare also supports tags and optional exports just like
+    Exporter. An addtion you can prefix or rename imports at import time. It
+    can be used as a drop-in replacement for exporter for an easy upgrade
+    path.
 
-        package MyPackage;
+BASIC SYNOPSIS
+  EXPORTING
+        package My::Exporter;
         use strict;
         use warnings;
         use Exporter::Declare;
 
         # works as expected
         our @EXPORT = qw/a/;
+        our @EXPORT_OK = qw/f/;
+        our @EXPORT_TAGS = (
+            main => \@EXPORT,
+            other => \@EXPORT_OK,
+            mylist => [ ... ],
+            # Bonus!
+            dynamic => sub { $class = shift; return ( qw/a b/ )}
+        );
 
         sub a { 'a' }
 
@@ -31,7 +43,23 @@ BASIC SYNOPSIS
         export 'd';
         sub d { 'd' }
 
+        export_ok 'e';
+        sub e { 'e' }
+
+        sub f { 'f' }
+
+        export_ok g => sub g { 'g' }
+
         1;
+
+  BASIC IMPORTING
+        package My::Consumer;
+        use strict;
+        use warnings;
+        use My::Exporter;
+
+        a(); #calls My::Consumer::a()
+        e(); # Will die, e() is in export_ok, not export
 
 ENHANCED INTERFACE SYNOPSIS
     Notice, no need for '=> sub', and trailing semicolon is optional.
@@ -103,37 +131,46 @@ EXPORTING DEVEL-DECLARE INTERFACES SYNOPSIS
 
 MANY FACES OF EXPORT
     The export() function is the magical interface. It can be used in many
-    forms:
+    forms. The following all work equally well for export_ok().
 
     our @EXPORT = @names;
+    our @EXPORT_OK = @names;
         Technically your not actually using the function here, but it is
         worth noting that use of a package variable '@EXPORT' works just
-        like Exporter. However there is not currently an @EXPORT_OK.
+        like Exporter.
 
     export($name)
+    export_ok($name)
         Export the sub specified by the string $name. This sub must be
         defined in the current package.
 
     export($name, sub { ... })
+    export_ok($name, sub { ... })
     export name => sub { ... }
+    export_ok name => sub { ... }
     export name { ... }
+    export_ok name { ... }
         Export the coderef under the specified name. In the second 2 forms
         an ending semicolon is optional, as well name can be quoted in
         single or double quotes, or left as a bareword.
 
     export( $name, $parser )
+    export_ok( $name, $parser )
         Export the sub specified by the string $name, applying the magic
         from the specified parser whenever the function is called by a class
         that imports it.
 
     export( $name, $parser, sub { ... })
+    export_ok( $name, $parser, sub { ... })
     export name parser { ... }
+    export_ok name parser { ... }
         Export the coderef under the specified name, applying the magic from
         the specified parser whenever the function is called by a class that
         imports it. In the second form name and parser can be quoted in
         single or double quotes, or left as a bareword.
 
     export name ( ... ) { ... }
+    export_ok name ( ... ) { ... }
         same as 'export name { ... }' except that parameters can be passed
         into the parser. Currently you cannot put any variables in the ( ...
         ) as it will be evaluated as a string outside of any closures - This
@@ -142,6 +179,7 @@ MANY FACES OF EXPORT
         Name can be a quoted string or a bareword.
 
     export name parser ( ... ) { ... }
+    export_ok name parser ( ... ) { ... }
         same as 'export name parser { ... }' except that parameters can be
         passed into the parser. Currently you cannot put any variables in
         the ( ... ) as it will be evaluated as a string outside of any
@@ -150,35 +188,66 @@ MANY FACES OF EXPORT
         Name and parser can be a quoted string or a bareword.
 
     $class->export( $name )
+    $class->export_ok( $name )
         Method form of 'export( $name )'. $name must be the name of a
         subroutine in the package $class. The export will be added as an
         export of $class.
 
     $class->export( $name, sub { ... })
+    $class->export_ok( $name, sub { ... })
         Method form of 'export( $name, \&code )'. The export will be added
         as an export of $class.
 
     $class->export( $name, $parser )
+    $class->export_ok( $name, $parser )
         Method form of 'export( $name, $parser )'. $name must be the name of
         a subroutine in the package $class. The export will be added as an
         export of $class.
 
     $class->export( $name, $parser, sub { ... })
+    $class->export_ok( $name, $parser, sub { ... })
         Method form of 'export( $name, $parser, \&code )'. The export will
         be added as an export of $class.
 
 IMPORTER SYNOPSIS
-  Normal
+  NORMAL
         package MyThing;
         use MyThingThatExports;
 
-  Import with a prefix
-        package MyThing;
-        use MyThingThatExports ':prefix:myprefix';
+  CUSTOMISING
+        package My::Consumer;
+        use strict;
+        use warnings;
+        use My::Exporter qw/ a !f :prefix:my_ :other !:mylist /,
+                         { a => 'apple' };
 
-  Import only some subs
-        package MyThing;
-        use MyThingThatExports qw/ sub_a sub_b /;
+        apple(); #calls My::Consumer::a(), renamed via the hash above
+
+        f(); # Will die, !f above means do not import
+
+        my_g(); # calls My::Consumer::e(), prefix applied, imported via :other
+
+        1;
+
+    'export_name'
+        If you list an export it will be imported (unless it appears in a
+        negated form)
+
+    '!export_name'
+        The export will not be imported
+
+    { export_name => 'new_name' }
+        Rename an import.
+
+    ':prefix:VALUE'
+        Specify that all imports should be renamed with the given prefix,
+        unless they are already renamed via a rename hash.
+
+    ':tag'
+    '!:tag'
+        Import all the exports listed by $EXPORT_TAGS{tag}. ! will negate
+        the list. all tag names are valid unless they conflict with a specal
+        keyword such as 'prefix' or 'extend'.
 
 Extending (Writing your own Exporter-Declare)
     Doing this will make it so that importing your package will not only
