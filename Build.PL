@@ -19,6 +19,7 @@ my $build = Module::Build->new(
         resources => {
             repository  => 'http://github.com/exodist/Exporter-Declare',
             bugtracker  => 'http://github.com/exodist/Exporter-Declare/issues',
+            homepage    => 'http://open-exodus.net/projects/Exporter-Declare',
         },
     }
 );

@@ -5,10 +5,12 @@ use warnings;
 use Test::More;
 use Test::Exception::LessClever;
 
-use_ok( "Exporter::Declare" );
 BEGIN {
+    use_ok( "Exporter::Declare", ':all' );
     use Devel::Declare::Parser;
 }
+
+can_ok( __PACKAGE__, 'exports', 'export_oks' );
 
 BEGIN {
     package Extended;
@@ -27,7 +29,7 @@ BEGIN {
     package UseExtended;
     use strict;
     use warnings;
-    Extended->import;
+    Extended->import( ':default' );
 
     export( 'c' => sub { 'c' } );
 
@@ -75,40 +77,35 @@ BEGIN {
     "Invalid parser";
 }
 
-use Exporter::Declare;
-
 export x { 100 }
 
 can_ok( 'Extended', 'export' );
 isa_ok( 'Extended', 'Exporter::Declare' );
 is_deeply(
-    [ sort keys %{ Extended->exports }],
-    [qw/ a b c export /],
+    [ sort keys %{ exports('Extended') }],
+    [ sort qw/ a b c /, keys %{ exports('Exporter::Declare') }],
     "exports"
 );
 
 can_ok( 'UseExtended', 'export', 'a', 'b', 'c' );
 ok( !UseExtended->isa( 'Extended' ), "Not an extended" );
-isa_ok( 'UseExtended', 'Exporter::Declare' );
-isa_ok( 'UseExtended', 'Exporter::Declare::Base' );
 is_deeply(
-    [ keys %{ UseExtended->exports }],
+    [ keys %{ exports('UseExtended') }],
     [ 'c' ],
     "export",
 );
+
 UseExtended->export( 'd' => sub { 'd' });
 is_deeply(
-    [ keys %{ UseExtended->exports }],
+    [ keys %{ exports('UseExtended') }],
     [ 'c', 'd' ],
     "export as class method",
 );
 
 can_ok( 'NormalUse', 'export' );
 ok( !NormalUse->isa( 'Extended' ), "Not an extended" );
-isa_ok( 'UseExtended', 'Exporter::Declare' );
-isa_ok( 'UseExtended', 'Exporter::Declare::Base' );
 is_deeply(
-    [ sort keys %{ NormalUse->exports }],
+    [ sort keys %{ exports('NormalUse') }],
     [ 'e', 'f', 'l', 'x', 'y', 'z' ],
     "Exports in normal use",
 );
@@ -127,14 +124,31 @@ throws_ok { NormalUse->export_to( 'xxx' )}
     "Must have sub to export";
 pop @NormalUse::EXPORT;
 
+ok(
+    ( grep { $_ eq 'import' } keys %{ exports( 'Extended' )}),
+    "extended exports import()"
+);
+can_ok( 'UseExtended', 'import' );
 can_ok( 'UseExtendedExtended', 'c' );
 ok( !UseExtendedExtended->isa( 'Extended' ), "Not an extended" );
 ok( !UseExtendedExtended->isa( 'Extended::Declare' ), "Not a declare" );
-ok( !UseExtendedExtended->isa( 'Extended::DeclareBase' ), "Not a declarebase" );
 ok( !UseExtendedExtended->can( 'export' ), "Can't export" );
 
 ok( !UsePrefix->can( 'c' ), "No c" );
 can_ok( 'UsePrefix', 'blah_c' );
+
+{
+    package XXX::Blah;
+    use strict;
+    use warnings;
+    use Test::More;
+    NormalUse->import( 'e', { e => 'xxx' });
+
+    can_ok( __PACKAGE__, 'xxx' );
+    is( xxx(), 'e', "renamed export" );
+    ok( ! __PACKAGE__->can( 'e' ), "did not import old name" );
+    ok( ! __PACKAGE__->can( 'y' ), "did not import other" );
+}
 
 {
     package XXX::XXX;
