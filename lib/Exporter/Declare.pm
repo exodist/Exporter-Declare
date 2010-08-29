@@ -7,7 +7,7 @@ use Scalar::Util qw/blessed/;
 use Devel::Declare::Interface;
 use Exporter::Declare::Export;
 
-our $VERSION = 0.019;
+our $VERSION = 0.020;
 our @CARP_NOT = ( __PACKAGE__ );
 our %PARSERS = ( export => Devel::Declare::Interface::get_parser('export'));
 our @EXPORT = qw/ export export_ok export_to import /;
@@ -148,6 +148,9 @@ sub _normalize_import_list {
 
 sub export_to {
     my ( $class, $dest, $specs, @list ) = @_;
+    $specs = { prefix => [ 1, $specs ]}
+        if $specs && !ref $specs;
+    $specs ||= {};
 
     my $parsers = parsers( $class );
     my $all_exports = all_exports( $class );
