@@ -34,6 +34,17 @@ BASIC SYNOPSIS
             dynamic => sub { $class = shift; return ( qw/a b/ )}
         );
 
+        our $_ID = 1;
+        # Fancy export is generated each time
+        our %GEN_EXPORT_OK = ( ... );
+        our %GEN_EXPORT = (
+            importer_id => sub {
+                my ( $exporting_class, $importing_class ) = @_;
+                my $id = _ID++;
+                return sub { $id };
+            }
+        );
+
         sub a { 'a' }
 
         # Declare an anonymous export
@@ -49,6 +60,17 @@ BASIC SYNOPSIS
         sub f { 'f' }
 
         export_ok g => sub g { 'g' }
+
+        # declarative generated export
+        {
+            my $alpha = 'A';
+            # can also use gen_export_ok
+            gen_export unique_alpha => sub {
+                my ( $exporting_class, $importing_class ) = @_;
+                my $uniq = $alpha++;
+                return sub { $uniq };
+            }
+        }
 
         1;
 
@@ -130,40 +152,58 @@ EXPORTING DEVEL-DECLARE INTERFACES SYNOPSIS
         beg( @args );
 
 MANY FACES OF EXPORT
-    The export() function is the magical interface. It can be used in many
-    forms. The following all work equally well for export_ok().
+    The export functions are the magical interface. They can be used in many
+    forms. This is a complete guide to all forms. In practice a small subset
+    is probably all most tools will use.
 
     our @EXPORT = @names;
     our @EXPORT_OK = @names;
+    our %GEN_EXPORT = ( name => \&generator, ... );
+    our %GEN_EXPORT_OK = ( name => \&generator, ... );
         Technically your not actually using the function here, but it is
         worth noting that use of a package variable '@EXPORT' works just
         like Exporter.
 
     export($name)
     export_ok($name)
+    gen_export($name)
+    gen_export_ok($name)
         Export the sub specified by the string $name. This sub must be
-        defined in the current package.
+        defined in the current package. Those with the 'gen_' prefix will
+        treat the referenced sub as a generator.
 
     export($name, sub { ... })
     export_ok($name, sub { ... })
     export name => sub { ... }
     export_ok name => sub { ... }
+    gen_export($name, sub { ... })
+    gen_export_ok($name, sub { ... })
+    gen_export name => sub { ... }
+    gen_export_ok name => sub { ... }
     export name { ... }
     export_ok name { ... }
+    gen_export name { ... }
+    gen_export_ok name { ... }
         Export the coderef under the specified name. In the second 2 forms
         an ending semicolon is optional, as well name can be quoted in
         single or double quotes, or left as a bareword.
 
     export( $name, $parser )
     export_ok( $name, $parser )
+    gen_export( $name, $parser )
+    gen_export_ok( $name, $parser )
         Export the sub specified by the string $name, applying the magic
         from the specified parser whenever the function is called by a class
         that imports it.
 
     export( $name, $parser, sub { ... })
     export_ok( $name, $parser, sub { ... })
+    gen_export( $name, $parser, sub { ... })
+    gen_export_ok( $name, $parser, sub { ... })
     export name parser { ... }
     export_ok name parser { ... }
+    gen_export name parser { ... }
+    gen_export_ok name parser { ... }
         Export the coderef under the specified name, applying the magic from
         the specified parser whenever the function is called by a class that
         imports it. In the second form name and parser can be quoted in
@@ -171,6 +211,8 @@ MANY FACES OF EXPORT
 
     export name ( ... ) { ... }
     export_ok name ( ... ) { ... }
+    gen_export name ( ... ) { ... }
+    gen_export_ok name ( ... ) { ... }
         same as 'export name { ... }' except that parameters can be passed
         into the parser. Currently you cannot put any variables in the ( ...
         ) as it will be evaluated as a string outside of any closures - This
@@ -180,6 +222,8 @@ MANY FACES OF EXPORT
 
     export name parser ( ... ) { ... }
     export_ok name parser ( ... ) { ... }
+    gen_export name parser ( ... ) { ... }
+    gen_export_ok name parser ( ... ) { ... }
         same as 'export name parser { ... }' except that parameters can be
         passed into the parser. Currently you cannot put any variables in
         the ( ... ) as it will be evaluated as a string outside of any
@@ -189,23 +233,31 @@ MANY FACES OF EXPORT
 
     $class->export( $name )
     $class->export_ok( $name )
+    $class->gen_export( $name )
+    $class->gen_export_ok( $name )
         Method form of 'export( $name )'. $name must be the name of a
         subroutine in the package $class. The export will be added as an
         export of $class.
 
     $class->export( $name, sub { ... })
     $class->export_ok( $name, sub { ... })
+    $class->gen_export( $name, sub { ... })
+    $class->gen_export_ok( $name, sub { ... })
         Method form of 'export( $name, \&code )'. The export will be added
         as an export of $class.
 
     $class->export( $name, $parser )
     $class->export_ok( $name, $parser )
+    $class->gen_export( $name, $parser )
+    $class->gen_export_ok( $name, $parser )
         Method form of 'export( $name, $parser )'. $name must be the name of
         a subroutine in the package $class. The export will be added as an
         export of $class.
 
     $class->export( $name, $parser, sub { ... })
     $class->export_ok( $name, $parser, sub { ... })
+    $class->gen_export( $name, $parser, sub { ... })
+    $class->gen_export_ok( $name, $parser, sub { ... })
         Method form of 'export( $name, $parser, \&code )'. The export will
         be added as an export of $class.
 

@@ -7,17 +7,37 @@ use Scalar::Util qw/blessed/;
 use Devel::Declare::Interface;
 use Exporter::Declare::Export;
 
-our $VERSION = '0.020';
+our $VERSION = '0.022';
 our @CARP_NOT = ( __PACKAGE__ );
 our %PARSERS = ( export => Devel::Declare::Interface::get_parser('export'));
-our @EXPORT = qw/ export export_ok export_to import /;
-our @EXPORT_OK = qw/ exports export_oks parsers exporter_tags all_exports /;
+our @EXPORT = qw/ export_to import /;
+our @EXPORT_OK = qw/
+    exports export_oks parsers exporter_tags all_exports gen_exports
+    gen_export_oks all_gen_exports
+/;
 our %EXPORTER_TAGS = (
-    all      => sub { keys %{ all_exports( @_ )}},
-    default  => sub { keys %{ exports( @_ )    }},
-    DEFAULT  => sub { keys %{ exports( @_ )    }},
-    extended => sub { keys %{ export_oks( @_ ) }},
+    all => sub {
+        keys( %{ all_exports( @_ )    }),
+        keys( %{ all_gen_exports( @_ )}),
+    },
+    default => sub {
+        keys( %{ exports( @_ )    }),
+        keys( %{ gen_exports( @_ )}),
+    },
+    DEFAULT => sub {
+        keys( %{ exports( @_ )    }),
+        keys( %{ gen_exports( @_ )}),
+    },
+    extended => sub {
+        keys( %{ export_oks( @_ )    }),
+        keys( %{ gen_export_oks( @_ )}),
+    },
 );
+
+export( 'export',        'export' );
+export( 'export_ok',     'export' );
+export( 'gen_export',    'export' );
+export( 'gen_export_ok', 'export' );
 
 sub import {
     my $class = shift;
@@ -89,6 +109,28 @@ sub all_exports {
     };
 }
 
+sub all_gen_exports {
+    my $class = shift;
+    return {
+        %{ gen_export_oks( $class ) },
+        %{ gen_exports( $class )    },
+    };
+}
+
+sub gen_exports {
+    my $class = shift;
+    no strict 'refs';
+    no warnings 'once';
+    \%{ $class . '::GEN_EXPORT' };
+}
+
+sub gen_export_oks {
+    my $class = shift;
+    no strict 'refs';
+    no warnings 'once';
+    \%{ $class . '::GEN_EXPORT_OK' };
+}
+
 sub parsers {
     my $class = shift;
     no strict 'refs';
@@ -154,17 +196,22 @@ sub export_to {
 
     my $parsers = parsers( $class );
     my $all_exports = all_exports( $class );
+    my $generated = all_gen_exports( $class );
 
     @list = _normalize_import_list( $class, $specs, @list );
 
     for my $name ( @list ) {
         my $sub = $all_exports->{ $name }
-            || croak "'$name' is not exported by $class.";
+            || ( $generated->{$name}
+                ? $generated->{$name}->( $class, $dest )
+                : croak "'$name' is not exported by $class."
+               );
 
         $sub = $class->can( $sub ) unless ref $sub eq 'CODE';
 
-        croak( "Could not find sub '$name' in $class for export" )
-            unless ref($sub) eq 'CODE';
+        croak "Could not find sub '$name' in $class for export. Got: "
+              . ( defined( $sub ) ? "'$sub'" : 'UNDEF' )
+              unless $sub && ref($sub) eq 'CODE';
 
         {
             no strict 'refs';
@@ -247,6 +294,15 @@ sub export_ok {
     _export( 'export_ok', $caller, @_ );
 }
 
+sub gen_export {
+    my $caller = caller;
+    _export( 'gen_export', $caller, @_ );
+}
+
+sub gen_export_ok {
+    my $caller = caller;
+    _export( 'gen_export_ok', $caller, @_ );
+}
 
 1;
 
@@ -290,6 +346,17 @@ drop-in replacement for exporter for an easy upgrade path.
         dynamic => sub { $class = shift; return ( qw/a b/ )}
     );
 
+    our $_ID = 1;
+    # Fancy export is generated each time
+    our %GEN_EXPORT_OK = ( ... );
+    our %GEN_EXPORT = (
+        importer_id => sub {
+            my ( $exporting_class, $importing_class ) = @_;
+            my $id = _ID++;
+            return sub { $id };
+        }
+    );
+
     sub a { 'a' }
 
     # Declare an anonymous export
@@ -305,6 +372,17 @@ drop-in replacement for exporter for an easy upgrade path.
     sub f { 'f' }
 
     export_ok g => sub g { 'g' }
+
+    # declarative generated export
+    {
+        my $alpha = 'A';
+        # can also use gen_export_ok
+        gen_export unique_alpha => sub {
+            my ( $exporting_class, $importing_class ) = @_;
+            my $uniq = $alpha++;
+            return sub { $uniq };
+        }
+    }
 
     1;
 
@@ -390,14 +468,19 @@ Then to use those in the importing class:
 
 =head1 MANY FACES OF EXPORT
 
-The export() function is the magical interface. It can be used in many forms.
-The following all work equally well for export_ok().
+The export functions are the magical interface. They can be used in many forms.
+This is a complete guide to all forms. In practice a small subset is probably
+all most tools will use.
 
 =over 4
 
 =item our @EXPORT = @names;
 
 =item our @EXPORT_OK = @names;
+
+=item our %GEN_EXPORT = ( name => \&generator, ... );
+
+=item our %GEN_EXPORT_OK = ( name => \&generator, ... );
 
 Technically your not actually using the function here, but it is worth noting
 that use of a package variable '@EXPORT' works just like L<Exporter>.
@@ -406,8 +489,13 @@ that use of a package variable '@EXPORT' works just like L<Exporter>.
 
 =item export_ok($name)
 
+=item gen_export($name)
+
+=item gen_export_ok($name)
+
 Export the sub specified by the string $name. This sub must be defined in the
-current package.
+current package. Those with the 'gen_' prefix will treat the referenced sub as
+a generator.
 
 =item export($name, sub { ... })
 
@@ -417,9 +505,21 @@ current package.
 
 =item export_ok name => sub { ... }
 
+=item gen_export($name, sub { ... })
+
+=item gen_export_ok($name, sub { ... })
+
+=item gen_export name => sub { ... }
+
+=item gen_export_ok name => sub { ... }
+
 =item export name { ... }
 
 =item export_ok name { ... }
+
+=item gen_export name { ... }
+
+=item gen_export_ok name { ... }
 
 Export the coderef under the specified name. In the second 2 forms an ending
 semicolon is optional, as well name can be quoted in single or double quotes,
@@ -429,6 +529,10 @@ or left as a bareword.
 
 =item export_ok( $name, $parser )
 
+=item gen_export( $name, $parser )
+
+=item gen_export_ok( $name, $parser )
+
 Export the sub specified by the string $name, applying the magic from the
 specified parser whenever the function is called by a class that imports it.
 
@@ -436,9 +540,17 @@ specified parser whenever the function is called by a class that imports it.
 
 =item export_ok( $name, $parser, sub { ... })
 
+=item gen_export( $name, $parser, sub { ... })
+
+=item gen_export_ok( $name, $parser, sub { ... })
+
 =item export name parser { ... }
 
 =item export_ok name parser { ... }
+
+=item gen_export name parser { ... }
+
+=item gen_export_ok name parser { ... }
 
 Export the coderef under the specified name, applying the magic from the
 specified parser whenever the function is called by a class that imports it. In
@@ -448,6 +560,10 @@ left as a bareword.
 =item export name ( ... ) { ... }
 
 =item export_ok name ( ... ) { ... }
+
+=item gen_export name ( ... ) { ... }
+
+=item gen_export_ok name ( ... ) { ... }
 
 same as 'export name { ... }' except that parameters can be passed into the
 parser. Currently you cannot put any variables in the ( ... ) as it will be
@@ -460,6 +576,10 @@ Name can be a quoted string or a bareword.
 
 =item export_ok name parser ( ... ) { ... }
 
+=item gen_export name parser ( ... ) { ... }
+
+=item gen_export_ok name parser ( ... ) { ... }
+
 same as 'export name parser { ... }' except that parameters can be passed into
 the parser. Currently you cannot put any variables in the ( ... ) as it will be
 evaluated as a string outside of any closures - This may be fixed in the
@@ -471,12 +591,20 @@ Name and parser can be a quoted string or a bareword.
 
 =item $class->export_ok( $name )
 
+=item $class->gen_export( $name )
+
+=item $class->gen_export_ok( $name )
+
 Method form of 'export( $name )'. $name must be the name of a subroutine in the
 package $class. The export will be added as an export of $class.
 
 =item $class->export( $name, sub { ... })
 
 =item $class->export_ok( $name, sub { ... })
+
+=item $class->gen_export( $name, sub { ... })
+
+=item $class->gen_export_ok( $name, sub { ... })
 
 Method form of 'export( $name, \&code )'. The export will be added as an export
 of $class.
@@ -485,6 +613,10 @@ of $class.
 
 =item $class->export_ok( $name, $parser )
 
+=item $class->gen_export( $name, $parser )
+
+=item $class->gen_export_ok( $name, $parser )
+
 Method form of 'export( $name, $parser )'. $name must be the name of a
 subroutine in the package $class. The export will be added as an export of
 $class.
@@ -492,6 +624,10 @@ $class.
 =item $class->export( $name, $parser, sub { ... })
 
 =item $class->export_ok( $name, $parser, sub { ... })
+
+=item $class->gen_export( $name, $parser, sub { ... })
+
+=item $class->gen_export_ok( $name, $parser, sub { ... })
 
 Method form of 'export( $name, $parser, \&code )'. The export will be added as
 an export of $class.
