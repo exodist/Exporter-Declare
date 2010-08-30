@@ -7,7 +7,7 @@ use Scalar::Util qw/blessed/;
 use Devel::Declare::Interface;
 use Exporter::Declare::Export;
 
-our $VERSION = '0.022';
+our $VERSION = '0.023';
 our @CARP_NOT = ( __PACKAGE__ );
 our %PARSERS = ( export => Devel::Declare::Interface::get_parser('export'));
 our @EXPORT = qw/ export_to import /;
