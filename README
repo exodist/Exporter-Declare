@@ -11,10 +11,11 @@ DESCRIPTION
     magic. With Devel::Declare::Parser and its parser library, you can write
     Devel::Declare enhanced functions without directly using Devel-Declare.
 
-    Exporter-Declare also supports tags and optional exports just like
-    Exporter. An addtion you can prefix or rename imports at import time. It
-    can be used as a drop-in replacement for exporter for an easy upgrade
-    path.
+    Exporter-Declare also supports tags, optional exports, and exported
+    variables just like Exporter. An addition you can prefix or rename
+    imports at import time.
+
+    Exporter::Declare should be usable as a drop-in replacement for Exporter
 
 BASIC SYNOPSIS
   EXPORTING

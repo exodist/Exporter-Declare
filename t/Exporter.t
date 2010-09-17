@@ -115,12 +115,12 @@ throws_ok { NormalUse::export() }
     "Must provide a name";
 
 throws_ok { NormalUse::export('bubba') }
-    qr/No code found in 'main' for exported sub 'bubba'/,
+    qr/No ref found in 'main' for exported item 'bubba'/,
     "Must have sub when adding export";
 
 push @NormalUse::EXPORT => 'apple';
 throws_ok { NormalUse->export_to( 'xxx' )}
-    qr/Could not find sub 'apple' in NormalUse for export/,
+    qr/Could not find 'apple' in NormalUse for export/,
     "Must have sub to export";
 pop @NormalUse::EXPORT;
 

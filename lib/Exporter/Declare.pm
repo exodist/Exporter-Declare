@@ -7,7 +7,7 @@ use Scalar::Util qw/blessed/;
 use Devel::Declare::Interface;
 use Exporter::Declare::Export;
 
-our $VERSION = '0.024';
+our $VERSION = '0.025';
 our @CARP_NOT = ( __PACKAGE__ );
 our %PARSERS = ( export => Devel::Declare::Interface::get_parser('export'));
 our @EXPORT = qw/ export_to import /;
@@ -201,17 +201,17 @@ sub export_to {
     @list = _normalize_import_list( $class, $specs, @list );
 
     for my $name ( @list ) {
-        my $sub = $all_exports->{ $name }
+        my $item = $all_exports->{ $name }
             || ( $generated->{$name}
                 ? $generated->{$name}->( $class, $dest )
                 : croak "'$name' is not exported by $class."
                );
 
-        $sub = $class->can( $sub ) unless ref $sub eq 'CODE';
+        $item = _get_item_ref( $class, $item ) unless ref $item;
 
-        croak "Could not find sub '$name' in $class for export. Got: "
-              . ( defined( $sub ) ? "'$sub'" : 'UNDEF' )
-              unless $sub && ref($sub) eq 'CODE';
+        croak "Could not find '$name' in $class for export. Got: "
+              . ( defined( $item ) ? "'$item'" : 'undef' )
+              unless $item && ref($item);
 
         {
             no strict 'refs';
@@ -219,7 +219,7 @@ sub export_to {
             *{ join( '::',
                 $dest,
                 _export_name( $class, $name, $specs ),
-            )} = $sub;
+            )} = $item;
         }
 
         my $parser = $parsers->{ $name };
@@ -238,39 +238,50 @@ sub _export_name {
     return $class->export_name( $name, $specs )
         if $class->can( 'export_name' );
 
-    return ( $specs->{rename} && $specs->{rename}->{ $name })
+    my $calculated = ( $specs->{rename} && $specs->{rename}->{ $name })
         ? $specs->{rename}->{ $name }
         : $specs->{prefix}
             ? $specs->{prefix}->[1] . $name
             : $name;
+
+    $calculated =~ s/^[\$\%\@]//g;
+
+    return $calculated;
 }
 
 sub _normalize_export_args {
-    my ( $exporter, $sub );
+    my ( $exporter, $item );
 
-    $sub = pop( @_ ) if ref( $_[-1] ) && ref( $_[-1] ) eq 'CODE';
-    $exporter = shift( @_ ) if $_[0]
-                            && (
-                                blessed( $_[0] )
-                             || (!ref($_[0]) && $_[0]->can('export'))
-                            );
+    $item = pop( @_ ) if ref( $_[-1] );
+
+    if ( $_[0] ) {
+        my $blessed = blessed( $_[0] );
+        my $ref = ref( $_[0] );
+        my $is_var = (!$ref && $_[0] =~ m/^[\$\%\@]\w+[\w\d_]*$/) ? 1 : 0;
+        my $can_export = $is_var ? 0 : $_[0]->can( 'export' );
+
+        $exporter = shift( @_ ) if $blessed || $can_export;
+    }
 
     $exporter = blessed( $exporter ) || $exporter || undef;
     my ( $name, $parser ) = @_;
 
-    return ( $name, $exporter, $sub, $parser );
+    return ( $name, $exporter, $item, $parser );
 }
 
 sub _export {
     my ( $type, $caller, @args ) = @_;
-    my ( $name, $exporter, $sub, $parser ) = _normalize_export_args( @args );
+    my ( $name, $exporter, $item, $parser ) = _normalize_export_args( @args );
     $exporter ||= $caller;
 
     croak( "You must provide a name to $type\()" )
         unless $name;
-    $sub ||= $exporter->can( $name );
-    croak( "No code found in '$exporter' for exported sub '$name'" )
-        unless $sub;
+
+    $item ||= _get_item_ref( $exporter, $name );
+    croak( "No ref found in '$exporter' for exported item '$name'" )
+        unless $item;
+
+    _verify_item_ref( $name, $item );
 
     my $export;
     my $parsers;
@@ -280,8 +291,26 @@ sub _export {
         $export = \%{ $exporter . '::' . uc($type) };
         $parsers = \%{ $exporter . '::PARSERS' };
     }
-    $export->{ $name } = $sub;
+    $export->{ $name } = $item;
     $parsers->{ $name } = $parser if $parser;
+}
+
+sub _get_item_ref {
+    my ( $package, $item ) = @_;
+    my ( $type, $name ) = ( $item =~ m/^([\$\%\@])(\w+[\w\d_]*)$/ );
+
+    return $package->can( $item )
+        unless $type && $name;
+
+    my $varstring = "${type}\{'$package\::$name'\}";
+    return eval "no strict 'refs'; \\$varstring";
+}
+
+sub _verify_item_ref {
+    my ( $name, $item ) = @_;
+    my ( $type ) = ( $item =~ m/^([\$\%\@])$/ );
+    $type ||= '&';
+    1;
 }
 
 sub export {
@@ -322,9 +351,11 @@ Exporter-Declare also provides a friendly interface to L<Devel::Declare> magic.
 With L<Devel::Declare::Parser> and its parser library, you can write
 L<Devel::Declare> enhanced functions without directly using Devel-Declare.
 
-Exporter-Declare also supports tags and optional exports just like L<Exporter>.
-An addtion you can prefix or rename imports at import time. It can be used as a
-drop-in replacement for exporter for an easy upgrade path.
+Exporter-Declare also supports tags, optional exports, and exported variables
+just like L<Exporter>.  An addition you can prefix or rename imports at import
+time.
+
+B<Exporter::Declare should be usable as a drop-in replacement for L<Exporter>>
 
 =head1 BASIC SYNOPSIS
 
