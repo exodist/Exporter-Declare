@@ -1,53 +1,51 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Test::More;
 
-BEGIN {
-    package MyExporter;
-    use strict;
-    use warnings;
-    use Test::More;
-    use Exporter::Declare;
-    use Test::Exception::LessClever;
+use Fennec::Lite;
 
-    sub normal { 1 };
-    export normala => sub { 1 };
-    export normalb => \&normal;
-    export 'normal';
+require_ok 'Exporter::Declare';
 
-    # export name parser { ... }
+*parse_import_args = \&Exporter::Declare::parse_import_args;
 
-    export apple { 'apple' }
+my ( $specs, @imports ) = parse_import_args(
+    { a => 'b', c => 'd' },
+    qw/a b c :aa -bb !:cc !-dd/,
+    ':ee' => { -prefix => 'xxx_' },
+    ff => { -as => 'fff' },
+    gg => [qw/ a b c /],
+);
 
-    export pear ( inject => 'my $pear = "pear";' ) { $pear }
 
-    export eexport export ( inject => 'my $inject = 1;' ) {
-        is( $_[0], "name", "got name" );
-        is( $_[1], "export", "got parser" );
-        is( $inject, 1, "injected" );
+
+done_testing;
+
+__END__
+
+sub parse_import_args {
+    my @list = @_;
+    my ( @imports, %specs );
+
+    $specs{_rename} = shift( @list )
+        if ref $list[0] && ref $list[0] eq 'HASH';
+
+    for( my $i = 0; $i < @list; $i++ ) {
+        my $item = $list[$i];
+        my $next = (($i + 1) == @list) ? $list[$i + 1] : undef;
+        my ( $neg, $tag, $name ) = ( $item =~ m/^(!?)([:-]?)(.*)$/);
+        if ( ref $next eq 'ARRAY' ) {
+            $specs{_args}->{$item} = $next;
+            $i++;
+        }
+        if ( $tag ) {
+            my ( $prop, $value ) = ( $name =~ m/^(.*):(.*)$/ );
+            $specs{$prop || $name} = $value || !$neg;
+        }
+        push @imports => $item;
     }
 
-    export_ok optional { 'You got me' }
-
-    my $id = 1;
-    gen_export id => sub { my $i = $id++; sub { $i }};
-    my $id2 = 10;
-    gen_export_ok id2 => sub { my $i = $id2++; sub { $i }};
+    my %seen;
+    return( \%specs, grep { !$seen{$_}++ } @imports, keys %{ $specs{_rename} || {} });
 }
 
-BEGIN { MyExporter->import( ':all' ) };
 
-eexport name export { 1 };
-is( apple(), "apple", "export name and block" );
-is( pear(), "pear", "export name and block with specs" );
-
-is( optional(), 'You got me', "export_ok magic" );
-
-is( id(), 1, "ID" );
-is( id(), 1, "ID Again" );
-
-is( id2(), 10, "ID2" );
-is( id2(), 10, "ID2 Again" );
-
-done_testing();
