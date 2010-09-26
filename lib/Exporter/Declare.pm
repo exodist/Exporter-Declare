@@ -14,107 +14,95 @@ use Exporter::Declare::Export::Generator;
 BEGIN { Exporter::Declare::Meta->new( __PACKAGE__ )}
 
 our $VERSION = '0.100';
-our @EXPORT = qw/ export_to import/;
-our @EXPORT_OK = qw/ reexport /;
-export( $_, 'export' ) for qw/ export export_ok gen_export gen_export_ok /;
-export( 'parser', 'sublike' );
 
-sub _import { 1 }
+default_export 'export', 'export';
+default_export 'import';
+
+export 'parser', 'sublike';
+parsed_exports 'export', qw/gen_export default_export gen_default_export/;
+exports qw/
+    default_exports exports parsed_exports parsed_default_exports reexport
+    import export_to
+/;
 
 sub import {
     my $class = shift;
     my $caller = caller;
-    my $specs = Exporter::Declare::Specs->new( $class, @_ )->export( $caller );
-
-    $class->_import( $caller, $specs );
-
-    return unless $class->export_meta->create_meta;
-    Exporter::Declare::Meta->new( $caller, $specs->flags->{extend} );
+    my $specs = export_to( $class, $caller, @_ );
+    $class->_import( $caller, $specs )
+        if $class->can( '_import' );
 }
 
-sub reexport {
+sub _import {
+    my ( $caller, $specs ) = @_;
+    Exporter::Declare::Meta->new( $caller );
+}
+
+sub make_exporter {
+    my $class = shift;
+    my ( $package, @args ) = @_;
+    my $specs = $class->export_to( $package, @args );
+    Exporter::Declare::Meta->new( $caller );
+}
+
+sub export_to {
+    my ( $class, $dest, @args ) = @_;
+    my $specs = Exporter::Declare::Specs->new( $class, @args );
+    $specs->export( $dest );
+    return $specs;
+}
+
+sub exports {
     my $caller = caller;
-    my $meta = $caller->meta;
-    $meta->merge( $_ ) for map { $_->export_meta } @_;
+    my $meta = $caller->export_meta
+    _export( $caller, $_ ) for @_;
+    $meta->get_tag('all');
 }
 
-sub _export {
-    my ( $caller, $add_method, $name, @param ) = @_;
-    my $ref = ref($param[-1]) ? pop(@param) : undef;
-    my ( $parser ) = @param;
+sub default_exports {
+    my $caller = caller;
+    my $meta = $caller->export_meta
+    $meta->push_tag( 'default', _export( $caller, undef, $_ ))
+        for my @_;
+    $meta->get_tag('default');
+}
 
-    my $meta = $caller->export_meta;
+sub parsed_exports {
 
-    ( $ref, $name ) = $meta->get_ref_from_package( $name )
-        unless $ref;
+}
 
-    my $expclass = reftype( $ref ) eq 'CODE'
-        ? 'Exporter::Declare::Export::Sub'
-        : 'Exporter::Declare::Export::Variable';
+sub parsed_default_exports {
 
-    $expclass->new(
-        $ref,
-        exported_by => $self->package,
-        $parser ? ( parser => $parser ) : (),
-    );
-
-    $meta->$add_method( $name, $ref );
 }
 
 sub export {
     my $caller = caller;
-    _export( $caller, 'add_export', @_ );
-}
-
-sub export_ok {
-    my $caller = caller;
-    _export( $caller, 'add_export_ok', @_ );
-}
-
-sub _gen_export {
-    my ( $caller, $add_method, $name, @param ) = @_;
-    my $ref = ref($param[-1]) eq 'CODE' ? pop(@param) : undef;
-    my ( $parser ) = @param;
-    croak "You must provide a generator sub"
-        unless $ref;
-
-    ( my $type, $name ) = ($name =~ m/^([\$\@\&\%]?)(.*)$/);
-    $type = undef if $type eq '&';
-
-    my $meta = $caller->export_meta;
-
-    my $expclass = reftype( $ref ) eq 'CODE'
-        ? 'Exporter::Declare::Export::Generator'
-        : croak "Export generators must be coderefs";
-
-    $expclass->new(
-        $ref,
-        exported_by => $self->package,
-
-        $parser ? ( parser => $parser    )
-                : (                      ),
-
-        $type   ? ( type   => 'variable' )
-                : ( type   => 'sub'      ),
-    );
-
-    $meta->$add_method( $name, $ref );
+    _export( $caller, undef, @_ );
 }
 
 sub gen_export {
     my $caller = caller;
-    _gen_export( $caller, 'add_export', @_ );
+    _export( $caller, 'Exporter::Declare::Export::Generator', @_ );
 }
 
-sub gen_export_ok {
+sub default_export {
     my $caller = caller;
-    _gen_export( $caller, 'add_export_ok', @_ );
+    $meta->push_tag( 'default', _export( $caller, undef, @_ ))
 }
 
-sub export_to {
-    my $class = shift;
-    my ( $dest, @args ) = @_;
-    Exporter::Declare::Specs->new( $class, @args )->export( $dest );
+sub gen_default_export {
+    my $caller = caller;
+    $meta->push_tag(
+        'default',
+        _export(
+            $caller,
+            'Exporter::Declare::Export::Generator',
+            @_,
+        )
+    )
+}
+
+sub reexport {
 }
 
 sub parser {
@@ -127,6 +115,38 @@ sub parser {
         unless $code;
 
     $caller->export_meta->parsers{ $name } = $code;
+}
+
+sub _export {
+    my ( $caller, $expclass, $name, @param ) = @_;
+    my $ref = ref($param[-1]) ? pop(@param) : undef;
+    my ( $parser ) = @param;
+    my $meta = $caller->export_meta;
+
+    ( $ref, $name ) = $meta->get_ref_from_package( $name )
+        unless $ref;
+
+    ( my $type, $name ) = ($name =~ m/^([\$\@\&\%]?)(.*)$/);
+    $type = undef if $type eq '&';
+
+    my $fullname = "$type$name";
+
+    $expclass ||= reftype( $ref ) eq 'CODE'
+        ? 'Exporter::Declare::Export::Sub'
+        : 'Exporter::Declare::Export::Variable';
+
+    $expclass->new(
+        $ref,
+        exported_by => $self->package,
+        ($parser ? ( parser => $parser    )
+                 : (                      )),
+        ($type   ? ( type   => 'variable' )
+                 : ( type   => 'sub'      )),
+    );
+
+    $meta->add_export( $fullname, $ref );
+
+    return $fullname;
 }
 
 1;

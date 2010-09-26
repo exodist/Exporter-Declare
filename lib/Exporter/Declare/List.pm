@@ -16,26 +16,16 @@ sub TIEARRAY {
     return $self;
 }
 
-sub package   { shift->[0]   }
-sub list_name { shift->[1]   }
-sub FETCHSIZE {
-    my $self = shift;
-    my ( $index ) = @_;
-    my $list_name = $self->list_name() . "_list";
-    return scalar $self->package->export_meta->$list_name;
-}
+sub package { shift->[0] }
+sub list    { shift->[1] }
 
-sub FETCH {
-    my $self = shift;
-    my ( $index ) = @_;
-    my $list_name = $self->list_name() . "_list";
-    my @out = $self->package->export_meta->$list_name;
-    return $out[$index];
-}
+sub FETCHSIZE { scalar @{ shift->list }}
+
+sub FETCH { $_[0]->list->[ $_[1] ]}
 
 sub STORESIZE {
     my $self = shift;
-    my ( $count );
+    my ( $count ) = @_;
     return unless $count < $self->FETCHSIZE;
     croak "Cannot shrink this array";
 }
@@ -54,12 +44,14 @@ sub STORE {
 
     $expclass->new( $ref, exported_by => $self->package );
 
-    my $list_name = "add_" . $self->list_name();
-    $self->package->export_meta->$list_name( $name, $ref );
+    $self->package->export_meta->add_export( $name, $ref );
+    my $list = $self->list;
+    push @$list => $name
+        unless $list->[-1] =~ m/^\&?$name$/;
 }
 
-sub DELETE { croak "You cannot delete from this array" }
 sub CLEAR  {                                           }
+sub DELETE { croak "You cannot delete from this array" }
 sub POP    { croak "You cannot pop from this array"    }
 sub SHIFT  { croak "You cannot shift from this array"  }
 

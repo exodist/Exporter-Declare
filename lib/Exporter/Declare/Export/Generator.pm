@@ -7,10 +7,17 @@ use Exporter::Declare::Export::Variable;
 
 sub type { shift->_data->{ type }}
 
+sub new {
+    my $class = shift;
+    croak "Generators must be coderefs, not " . ref($_[0])
+        unless ref( $_[0] ) eq 'CODE';
+    $class->SUPER::new( @_ );
+}
+
 sub generate {
     my $self = shift;
     my ( $import_class, @args ) = @_;
-    my $ref = $self->( $iself->export_class, $import_class, @args );
+    my $ref = $self->( $self->export_class, $import_class, @args );
 
     return Exporter::Declare::Export::Sub->new(
         $ref,

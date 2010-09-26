@@ -21,22 +21,28 @@ sub new {
 sub process {
     my $self = shift;
     my ( $tag, @args ) = @_;
-    my $arg = 0;
+    my $argnum = 0;
     while ( my $item = shift( @args )) {
-        croak "not sure what to do with $item ($tag argument: $arg)"
+        croak "not sure what to do with $item ($tag argument: $argnum)"
             if ref $item;
 
-        # This is a legacy thing...
-        if ( $item =~ m/^[-:](prefix|suffix)(?::(.*))?$/ ) {
-            $self->config->{$1} = $2 || shift( @args );
-            $arg++ if $2;
+        if ( $item =~ m/^(!?)[:-](.*)$/ ) {
+            my ( $neg, $tag ) = ( $1, $2 );
+            if ( $self->package->export_meta->paramed_tags->{ $tag }) {
+                $self->config->{$tag} = shift( @args );
+                $argnum++;
+            }
+            else {
+                $self->config->{$tag} = !$neg;
+            }
         }
-        elsif ( $item =~ m/^!(.*)$/ ) {
+
+        if ( $item =~ m/^!(.*)$/ ) {
             $self->_exclude_item( $item )
         }
         elsif ( my $type = ref( $args[0] )) {
             my $arg = shift( @args );
-            $arg++;
+            $argnum++;
             if ( $type eq 'ARRAY' ) {
                 $self->_include_item_and_args( $item, $arg )
             }
@@ -45,14 +51,15 @@ sub process {
             }
             else {
                 croak "Not sure what to do with $item => $arg ($tag arguments: "
-                . ($arg - 1) . " and $arg)";
+                . ($argnum - 1) . " and $argnum)";
             }
         }
         else {
             $self->_include_item( $item )
         }
-        $arg++;
+        $argnum++;
     }
+    delete $self->exports->{$_} for @{ $self->excludes };
 }
 
 sub _item_name { my $in = shift; $in =~ m/^[\&\$\%\@]/ ? $in : "\&in" }
@@ -60,15 +67,49 @@ sub _item_name { my $in = shift; $in =~ m/^[\&\$\%\@]/ ? $in : "\&in" }
 sub _exclude_item {
     my $self = shift;
     my ( $item ) = @_;
-    die "handle tags";
-    $item = _item_name($item)
+
+    if ( $item =~ m/^[:-](.*)$/ ) {
+        $self->_exclude_item( $_ )
+            for $self->_get_tag( $1 );
+        return;
+    }
+
+    push @{ $self->excludes } => _item_name($item);
 }
 
 sub _include_item {
     my $self = shift;
     my ( $item, $conf, $args ) = @_;
-    die "handle tags";
-    $item = _item_name($item)
+
+    if ( $item =~ m/^[:-](.*)$/ ) {
+        $self->_include_item( $_, $conf, $args )
+            for $self->_get_tag( $1 );
+        return;
+    }
+
+    $item = _item_name($item);
+
+    my $existing = $self->exports->{ $item };
+    return $self->exports->{ $item } = [
+        $self->_get_item( $item ),
+        $conf,
+        $args,
+    ] unless $existing;
+
+    $existing->[1] = { %{$existing->[1]}, %$conf };
+    push @{ $existing->[2] } => @$args;
+}
+
+sub _get_item {
+    my $self = shift;
+    my ( $name ) = @_;
+    $self->package->export_meta->get_exports( $name );
+}
+
+sub _get_tag {
+    my $self = shift;
+    my ( $name ) = @_;
+    $self->package->export_meta->get_tag( $name );
 }
 
 sub _include_item_and_args {
@@ -107,32 +148,3 @@ sub export {
 }
 
 1;
-
-__END__
-
-sub parse_import_args {
-    my @list = @_;
-    my ( @imports, %specs );
-
-    $specs{_rename} = shift( @list )
-        if ref $list[0] && ref $list[0] eq 'HASH';
-
-    for( my $i = 0; $i < @list; $i++ ) {
-        my $item = $list[$i];
-        my $next = (($i + 1) == @list) ? $list[$i + 1] : undef;
-        my ( $neg, $tag, $name ) = ( $item =~ m/^(!?)([:-]?)(.*)$/);
-        if ( ref $next ) {
-            $specs{_args}->{$item} = $next;
-
-            $i++;
-        }
-        if ( $tag ) {
-            my ( $prop, $value ) = ( $name =~ m/^(.*):(.*)$/ );
-            $specs{$prop || $name} = $value || !$neg;
-        }
-        push @imports => $item;
-    }
-
-    my %seen;
-    return( \%specs, grep { !$seen{$_}++ } @imports, keys %{ $specs{_rename} || {} });
-}
