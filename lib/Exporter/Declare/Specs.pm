@@ -14,11 +14,27 @@ sub new {
     my ( $package, @args ) = @_;
     my $self = bless( [$package,{},{},[]], $class );
     @args = (':default') unless @args;
-    $self->process( "import list", @args );
+    $self->_process( "import list", @args );
     return $self;
 }
 
-sub process {
+sub export {
+    my $self = shift;
+    my ( $dest ) = @_;
+    for my $item ( keys %{ $self->exports }) {
+        my ( $export, $conf, $args ) = @{ $self->exports->{$name} };
+        my ( $sigil, $name ) = ( $item =~ m/^([\&\%\$\@])(.*)$/ );
+        my $name = $conf->{as} || join(
+            '',
+            $conf->{prefix} || $self->config->{prefix} || '',
+            $name,
+            $conf->{suffix} || $self->config->{suffix} || '',
+        );
+        $export->inject( $dest, $name, @$args );
+    }
+}
+
+sub _process {
     my $self = shift;
     my ( $tag, @args ) = @_;
     my $argnum = 0;
@@ -141,10 +157,6 @@ sub _include_item_and_conf {
         (keys %conf ? \%conf : undef),
         (@args ? \@args : ()),
     );
-}
-
-sub export {
-
 }
 
 1;

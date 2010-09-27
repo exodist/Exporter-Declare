@@ -10,11 +10,15 @@ my $build = Module::Build->new(
     create_readme => 1,
     requires => {
         'Devel::Declare::Parser' => 0.017,
-        'Test::Exception::LessClever' => 0.005,
-        'Test::Simple' => 0.88,
         'Carp' => 0,
         'Scalar::Util' => 0,
+        'aliased' => 0,
     },
+    test_requires => {
+        'Test::Simple' => 0.88,
+        'Fennec::Lite' => '0.004',
+        'Test::Exception' => 0,
+    }
     meta_merge => {
         resources => {
             repository  => 'http://github.com/exodist/Exporter-Declare',

@@ -2,7 +2,7 @@ package Exporter::Declare::Meta;
 use strict;
 use warnings;
 
-use Scalar::Util qw/blessed reftype weaken/;
+use Scalar::Util qw/blessed reftype/;
 use Carp qw/croak/;
 
 our %TYPE_TO_IDX_MAP = (
@@ -12,13 +12,10 @@ our %TYPE_TO_IDX_MAP = (
     '%'    => 3,
 );
 
-our %EXPORTERS;
-
 sub package     { shift->[0]  }
 sub exports     { shift->[1]  }
 sub export_tags { shift->[2]  }
 sub parsers     { shift->[3]  }
-sub exporters   { \%EXPORTERS }
 
 sub new {
     my $class = shift;
@@ -51,9 +48,6 @@ sub new {
         );
     }
 
-    $class->exporters->{ $package } = $self;
-    weaken $class->exporters->{ $package };
-
     return $self;
 }
 
@@ -71,7 +65,6 @@ sub add_export {
     croak "Already exporting type '" . reftype($ref) . "' under name '$name'"
         if $self->exports->{$name}->[$idx];
 
-    $ref->name( $name );
     $self->exports->{$name}->[$idx] = $ref;
     push @{ $self->export_tags->{all}} => "$type$name";
 }

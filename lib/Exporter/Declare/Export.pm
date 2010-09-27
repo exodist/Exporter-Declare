@@ -1,7 +1,8 @@
 package Exporter::Declare::Export;
 use strict;
 use warnings;
-use Carp qw/croak/;
+use Carp qw/croak carp/;
+use Scalar::Util qw/reftype/;
 
 our %OBJECT_DATA;
 
@@ -13,7 +14,7 @@ sub new {
     my $self = bless( $item, $class );
 
     for my $prop ( $self->required_specs ) {
-        croak "You must specify $prop when calling $class\->new()\n"
+        croak "You must specify $prop when calling $class\->new()"
             unless $specs{$prop};
     }
 
@@ -32,16 +33,11 @@ sub exported_by {
     shift->_data->{ exported_by };
 }
 
-sub name {
-    my $data = shift->_data;
-    ($data->{ name }) = @_ if @_;
-    $data->{ name };
-}
-
 sub inject {
     my $self = shift;
-    my ($class, $name) = @_;
-    $name ||= $self->name;
+    my ( $class, $name, @args ) = @_;
+    carp "Ignoring arguments importing (" . reftype($self) . ")$name into $class"
+        if @args;
     croak "You must provide a class and name to inject()"
         unless $class && $name;
     no strict 'refs';

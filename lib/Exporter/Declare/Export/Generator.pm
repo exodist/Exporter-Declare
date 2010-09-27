@@ -4,6 +4,15 @@ use warnings;
 
 use base 'Exporter::Declare::Export::Sub';
 use Exporter::Declare::Export::Variable;
+use Carp qw/croak/;
+
+sub required_specs {
+    my $self = shift;
+    return(
+        $self->SUPER::required_specs(),
+        qw/ type /,
+    );
+}
 
 sub type { shift->_data->{ type }}
 
@@ -17,7 +26,7 @@ sub new {
 sub generate {
     my $self = shift;
     my ( $import_class, @args ) = @_;
-    my $ref = $self->( $self->export_class, $import_class, @args );
+    my $ref = $self->( $self->exported_by, $import_class, @args );
 
     return Exporter::Declare::Export::Sub->new(
         $ref,

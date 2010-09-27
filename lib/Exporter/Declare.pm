@@ -5,25 +5,23 @@ use warnings;
 use Carp qw/croak/;
 use Exporter::Declare::Parser;
 use Devel::Declare::Parser::Sublike;
-use Exporter::Declare::Meta;
-use Exporter::Declare::Specs;
-use Exporter::Declare::Export::Sub;
-use Exporter::Declare::Export::Variable;
-use Exporter::Declare::Export::Generator;
+use aliased 'Exporter::Declare::Meta';
+use aliased 'Exporter::Declare::Specs';
+use aliased 'Exporter::Declare::Export::Sub';
+use aliased 'Exporter::Declare::Export::Variable';
+use aliased 'Exporter::Declare::Export::Generator';
 
-BEGIN { Exporter::Declare::Meta->new( __PACKAGE__ )}
+BEGIN { Meta->new( __PACKAGE__ )}
 
 our $VERSION = '0.100';
 
-default_export 'export', 'export';
-default_export 'import';
+default_export( 'export', 'export' );
+default_export( 'import'           );
 
-export 'parser', 'sublike';
-parsed_exports 'export', qw/gen_export default_export gen_default_export/;
-exports qw/
-    default_exports exports parsed_exports parsed_default_exports reexport
-    import export_to
-/;
+export( 'parser', 'sublike' );
+parsed_exports( 'export', qw/gen_export default_export gen_default_export/ );
+exports(qw/ default_exports exports parsed_exports parsed_default_exports
+            reexport import export_to export_alias /                       );
 
 sub import {
     my $class = shift;
@@ -35,93 +33,103 @@ sub import {
 
 sub _import {
     my ( $caller, $specs ) = @_;
-    Exporter::Declare::Meta->new( $caller );
+    Meta->new( $caller );
 }
 
 sub make_exporter {
     my $class = shift;
     my ( $package, @args ) = @_;
     my $specs = $class->export_to( $package, @args );
-    Exporter::Declare::Meta->new( $caller );
+    Meta->new( $caller );
 }
 
 sub export_to {
-    my ( $class, $dest, @args ) = @_;
-    my $specs = Exporter::Declare::Specs->new( $class, @args );
+    my $class = _find_export_class( @_ );
+    my ( $dest, @args ) = @_;
+    my $specs = Specs->new( $class, @args );
     $specs->export( $dest );
     return $specs;
 }
 
 sub exports {
-    my $caller = caller;
-    my $meta = $caller->export_meta
-    _export( $caller, $_ ) for @_;
+    my $class = _find_export_class( @_ );
+    my $meta = $class->export_meta;
+    _export( $class, $_ ) for @_;
     $meta->get_tag('all');
 }
 
 sub default_exports {
-    my $caller = caller;
-    my $meta = $caller->export_meta
-    $meta->push_tag( 'default', _export( $caller, undef, $_ ))
+    my $class = _find_export_class( @_ );
+    my $meta = $class->export_meta;
+    $meta->push_tag( 'default', _export( $class, undef, $_ ))
         for my @_;
     $meta->get_tag('default');
 }
 
 sub parsed_exports {
-
+    my $class = _find_export_class( @_ );
+    my ( $parser, @items ) = @_;
+    export( $class, $_, $parser );
 }
 
 sub parsed_default_exports {
-
+    my $class = _find_export_class( @_ );
+    default_export( $class, $_, $parser );
 }
 
 sub export {
-    my $caller = caller;
-    _export( $caller, undef, @_ );
+    my $class = _find_export_class( @_ );
+    _export( $class, undef, @_ );
 }
 
 sub gen_export {
-    my $caller = caller;
-    _export( $caller, 'Exporter::Declare::Export::Generator', @_ );
+    my $class = _find_export_class( @_ );
+    _export( $class, Generator(), @_ );
 }
 
 sub default_export {
-    my $caller = caller;
-    $meta->push_tag( 'default', _export( $caller, undef, @_ ))
+    my $class = _find_export_class( @_ );
+    my $meta = $class->export_meta;
+    $meta->push_tag( 'default', _export( $class, undef, @_ ));
 }
 
 sub gen_default_export {
-    my $caller = caller;
-    $meta->push_tag(
-        'default',
-        _export(
-            $caller,
-            'Exporter::Declare::Export::Generator',
-            @_,
-        )
-    )
+    my $class = _find_export_class( @_ );
+    my $meta = $class->export_meta;
+    $meta->push_tag( 'default', _export( $class, Generator(), @_ ));
+}
+
+sub export_alias {
+    my $class = _find_export_class( @_ );
+    my $meta = $class->export_meta;
+    my $short = $class;
+    $short =~ s/^.*::([^:]+)$/$1/;
+    my $meta = $class->export_meta;
+    $meta->push_tag( 'default', _export( $class, Sub(), $short, sub { $class }));
 }
 
 sub reexport {
+    my $class = _find_export_class( @_ );
+    $class->export_meta->reexport( @_ );
 }
 
 sub parser {
-    my $caller = caller;
+    my $class = _find_export_class( @_ );
     my ( $name, $code ) = @_;
     croak "You must provide a name to parser()"
         if !$name || ref $name;
-    $code ||= $caller->can( $name );
+    $code ||= $class->can( $name );
     croak "Could not find code for parser '$name'"
         unless $code;
 
-    $caller->export_meta->parsers{ $name } = $code;
+    $class->export_meta->parsers{ $name } = $code;
 }
 
 sub _export {
-    my ( $caller, $expclass, $name, @param ) = @_;
+    my ( $class, $expclass, $name, @param ) = @_;
     my $ref = ref($param[-1]) ? pop(@param) : undef;
     my ( $parser ) = @param;
-    my $meta = $caller->export_meta;
+    my $meta = $class->export_meta;
 
     ( $ref, $name ) = $meta->get_ref_from_package( $name )
         unless $ref;
@@ -132,8 +140,8 @@ sub _export {
     my $fullname = "$type$name";
 
     $expclass ||= reftype( $ref ) eq 'CODE'
-        ? 'Exporter::Declare::Export::Sub'
-        : 'Exporter::Declare::Export::Variable';
+        ? Sub()
+        : Variable();
 
     $expclass->new(
         $ref,
@@ -147,6 +155,16 @@ sub _export {
     $meta->add_export( $fullname, $ref );
 
     return $fullname;
+}
+
+sub _find_export_class(\@) {
+    my $args = shift;
+
+    return shift( @$args )
+        if @$args
+        && eval { $args->[0]->can('export_meta') };
+
+    return caller(1);
 }
 
 1;

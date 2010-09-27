@@ -2,8 +2,6 @@ package Exporter::Declare::Export::Sub;
 use strict;
 use warnings;
 
-use B;
-
 use base 'Exporter::Declare::Export';
 
 sub inject {
@@ -32,34 +30,9 @@ sub inject {
     }
 }
 
-sub start_line {
-    my $self = shift;
-    return B::svref_2object( $self )->START->line;
-}
-
-sub end_line {
-    my $self = shift;
-    return $self->_data->{end_line};
-}
-
 sub parser {
     my $self = shift;
     return $self->_data->{parser};
-}
-
-sub original_name {
-    my $self = shift;
-    return B::svref_2object( $self )->GV->NAME;
-}
-
-sub is_anon {
-    my $self = shift;
-    return $self->original_name eq '__ANON__' ? 1 : 0;
-}
-
-sub original_package {
-    my $self = shift;
-    return B::svref_2object( $self )->GV->STASH->NAME;
 }
 
 1;
