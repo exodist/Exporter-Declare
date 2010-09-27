@@ -5,48 +5,29 @@ use warnings;
 use Scalar::Util qw/blessed reftype/;
 use Carp qw/croak/;
 
+sub new {
+    my $class = shift;
+    my ( $package, %params ) = @_;
+    my $self = bless([
+        $package,
+        {}, #exports
+        { default => [], all => [] }, #tags
+        {}, #parsers
+    ], $class);
+
+    $self->_establish_link unless $params{no_link};
+
+    return $self;
+}
+
 sub package     { shift->[0] }
 sub exports     { shift->[1] }
 sub export_tags { shift->[2] }
 sub parsers     { shift->[3] }
 
-sub new {
-    my $class = shift;
-    my ( $package, $creates_meta ) = @_;
-    my $self = bless([
-        $package,
-        {},
-        {},
-        { default => [], all => [] },
-        {},
-    ], $class);
-
-    $self->_establish_link;
-
-    return $self;
-}
-
 sub _establish_link {
     my $self = shift;
-    my $package = $self->package;
-
-    no strict 'refs';
-    *{"$package\::export_meta"} = sub { $self };
-    *{"$package\::EXPORT_TAGS"} = $self->export_tags;
-    tie(
-        @{"$package\::EXPORT_OK"},
-        'Exporter::Declare::List',
-        $self->package,
-        $self->export_tags->{all},
-        @{"$package\::EXPORT_OK"},
-    );
-    tie(
-        @{"$package\::EXPORT"},
-        'Exporter::Declare::List',
-        $self->package,
-        $self->export_tags->{default},
-        @{"$package\::EXPORT"},
-    );
+    *{$self->package . '::EXPORT_TAGS'} = $self->export_tags;
 }
 
 sub add_export {
