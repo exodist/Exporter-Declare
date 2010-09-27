@@ -119,7 +119,7 @@ sub _include_item {
 sub _get_item {
     my $self = shift;
     my ( $name ) = @_;
-    $self->package->export_meta->get_exports( $name );
+    $self->package->export_meta->get_export( $name );
 }
 
 sub _get_tag {
