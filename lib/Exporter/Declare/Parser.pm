@@ -133,7 +133,7 @@ __END__
 
 =head1 NAME
 
-Exporter::Declare::Export - The parser behind the export() magic.
+Exporter::Declare::Parser - The parser behind the export() magic.
 
 =head1 AUTHORS
 

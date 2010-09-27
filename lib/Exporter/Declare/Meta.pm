@@ -27,7 +27,7 @@ sub parsers     { shift->[3] }
 
 sub _establish_link {
     my $self = shift;
-    *{$self->package . '::EXPORT_TAGS'} = $self->export_tags;
+    *{$self->package . '::export_meta'} = sub { $self };
 }
 
 sub add_export {
