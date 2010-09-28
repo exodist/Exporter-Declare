@@ -4,11 +4,6 @@ use warnings;
 
 use Carp qw/croak/;
 
-sub package  { shift->[0] }
-sub config   { shift->[1] }
-sub exports  { shift->[2] }
-sub excludes { shift->[3] }
-
 sub new {
     my $class = shift;
     my ( $package, @args ) = @_;
@@ -18,13 +13,18 @@ sub new {
     return $self;
 }
 
+sub package  { shift->[0] }
+sub config   { shift->[1] }
+sub exports  { shift->[2] }
+sub excludes { shift->[3] }
+
 sub export {
     my $self = shift;
     my ( $dest ) = @_;
     for my $item ( keys %{ $self->exports }) {
-        my ( $export, $conf, $args ) = @{ $self->exports->{$name} };
+        my ( $export, $conf, $args ) = @{ $self->exports->{$item} };
         my ( $sigil, $name ) = ( $item =~ m/^([\&\%\$\@])(.*)$/ );
-        my $name = $conf->{as} || join(
+        $name = $conf->{as} || join(
             '',
             $conf->{prefix} || $self->config->{prefix} || '',
             $name,
@@ -41,29 +41,31 @@ sub _process {
     while ( my $item = shift( @args )) {
         croak "not sure what to do with $item ($tag argument: $argnum)"
             if ref $item;
+        $argnum++;
 
         if ( $item =~ m/^(!?)[:-](.*)$/ ) {
-            my ( $neg, $tag ) = ( $1, $2 );
-            if ( $self->package->export_meta->paramed_tags->{ $tag }) {
-                $self->config->{$tag} = shift( @args );
+            my ( $neg, $param ) = ( $1, $2 );
+            if ( $self->package->export_meta->is_option( $param )) {
+                $self->config->{$param} = shift( @args );
                 $argnum++;
+                next;
             }
             else {
-                $self->config->{$tag} = !$neg;
+                $self->config->{$param} = !$neg;
             }
         }
 
         if ( $item =~ m/^!(.*)$/ ) {
-            $self->_exclude_item( $item )
+            $self->_exclude_item( $1 )
         }
         elsif ( my $type = ref( $args[0] )) {
             my $arg = shift( @args );
             $argnum++;
             if ( $type eq 'ARRAY' ) {
-                $self->_include_item_and_args( $item, $arg )
+                $self->_include_item( $item, undef, $arg );
             }
             elsif ( $type eq 'HASH' ) {
-                $self->_include_item_and_conf( $item, $arg )
+                $self->_include_item( $item, $arg, undef );
             }
             else {
                 croak "Not sure what to do with $item => $arg ($tag arguments: "
@@ -73,12 +75,11 @@ sub _process {
         else {
             $self->_include_item( $item )
         }
-        $argnum++;
     }
     delete $self->exports->{$_} for @{ $self->excludes };
 }
 
-sub _item_name { my $in = shift; $in =~ m/^[\&\$\%\@]/ ? $in : "\&in" }
+sub _item_name { my $in = shift; $in =~ m/^[\&\$\%\@]/ ? $in : "\&$in" }
 
 sub _exclude_item {
     my $self = shift;
@@ -96,6 +97,16 @@ sub _exclude_item {
 sub _include_item {
     my $self = shift;
     my ( $item, $conf, $args ) = @_;
+    $conf ||= {};
+    $args ||= [];
+
+    push @$args => @{ delete $conf->{'-args'} }
+        if defined $conf->{'-args'};
+
+    for my $key ( keys %$conf ) {
+        next if $key =~ m/^[:-]/;
+        push @$args => ( $key, delete $conf->{$key} );
+    }
 
     if ( $item =~ m/^[:-](.*)$/ ) {
         $self->_include_item( $_, $conf, $args )
@@ -106,14 +117,17 @@ sub _include_item {
     $item = _item_name($item);
 
     my $existing = $self->exports->{ $item };
-    return $self->exports->{ $item } = [
-        $self->_get_item( $item ),
-        $conf,
-        $args,
-    ] unless $existing;
 
-    $existing->[1] = { %{$existing->[1]}, %$conf };
+    unless ( $existing ) {
+        $existing = [ $self->_get_item( $item ), {}, []];
+        $self->exports->{ $item } = $existing;
+    }
+
     push @{ $existing->[2] } => @$args;
+    for my $param (  keys %$conf ) {
+        my ( $name ) = ( $param =~ m/^[-:](.*)$/ );
+        $existing->[1]->{$name} = $conf->{$param};
+    }
 }
 
 sub _get_item {
@@ -126,37 +140,6 @@ sub _get_tag {
     my $self = shift;
     my ( $name ) = @_;
     $self->package->export_meta->get_tag( $name );
-}
-
-sub _include_item_and_args {
-    my $self = shift;
-    my ( $item, $args ) = @_;
-    $self->_include_item( $item, undef, $args );
-}
-
-sub _include_item_and_conf {
-    my $self = shift;
-    my ( $item, $inconf ) = @_;
-    my ( %conf, @args );
-
-    push @args => @{ delete $inconf{'-args'} }
-        if defined $inconf{'-args'};
-
-    for my $key ( keys %$inconf ) {
-        my $val = $inconf->{$key};
-        if ( $key =~ m/^[:-](.*)$/ ) {
-            $conf{$1} = $val
-        }
-        else {
-            push @args => ( $key, $val );
-        }
-    }
-
-    $self->_include_item(
-        $item,
-        (keys %conf ? \%conf : undef),
-        (@args ? \@args : ()),
-    );
 }
 
 1;
