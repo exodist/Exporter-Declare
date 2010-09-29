@@ -12,7 +12,7 @@ sub inject {
 
     return unless $self->parser;
 
-    my $parser_sub = $self->exported_by->export_meta->parsers->{ $self->parser };
+    my $parser_sub = $self->exported_by->export_meta->get_parser( $self->parser );
     if ( my $parser_sub ) {
         require Devel::Declare;
         Devel::Declare->setup_for(

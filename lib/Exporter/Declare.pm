@@ -5,6 +5,7 @@ use warnings;
 use Carp qw/croak/;
 use Exporter::Declare::Parser;
 use Devel::Declare::Parser::Sublike;
+use Scalar::Util qw/reftype/;
 use aliased 'Exporter::Declare::Meta';
 use aliased 'Exporter::Declare::Specs';
 use aliased 'Exporter::Declare::Export::Sub';
@@ -15,13 +16,27 @@ BEGIN { Meta->new( __PACKAGE__ )}
 
 our $VERSION = '0.100';
 
-default_export( 'export', 'export' );
-default_export( 'import'           );
+parsed_default_exports( export => qw/
+    export
+    gen_export
+    default_export
+    gen_default_export
+/);
 
-export( 'parser', 'sublike' );
-parsed_exports( 'export', qw/gen_export default_export gen_default_export/ );
-exports(qw/ default_exports exports parsed_exports parsed_default_exports
-            reexport import export_to export_alias options /               );
+default_exports( qw/
+    import
+    export_to
+    exports
+    default_exports
+    options
+/);
+
+exports( qw/
+    parsed_exports
+    parsed_default_exports
+    reexport
+    parser
+/);
 
 sub import {
     my $class = shift;
@@ -32,6 +47,7 @@ sub import {
 }
 
 sub _import {
+    my $class = shift;
     my ( $caller, $specs ) = @_;
     Meta->new( $caller );
 }
@@ -54,7 +70,7 @@ sub export_to {
 sub exports {
     my $class = _find_export_class( \@_ );
     my $meta = $class->export_meta;
-    _export( $class, $_ ) for @_;
+    _export( $class, undef, $_ ) for @_;
     $meta->get_tag('all');
 }
 
@@ -69,7 +85,8 @@ sub default_exports {
 sub parsed_exports {
     my $class = _find_export_class( \@_ );
     my ( $parser, @items ) = @_;
-    export( $class, $_, $parser );
+    croak "no parser specified" unless $parser;
+    export( $class, $_, $parser ) for @items;
 }
 
 sub parsed_default_exports {
@@ -100,14 +117,6 @@ sub gen_default_export {
     $meta->push_tag( 'default', _export( $class, Generator(), @_ ));
 }
 
-sub export_alias {
-    my $class = _find_export_class( \@_ );
-    my $meta = $class->export_meta;
-    my $short = $class;
-    $short =~ s/^.*::([^:]+)$/$1/;
-    $meta->push_tag( 'default', _export( $class, Sub(), $short, sub { $class }));
-}
-
 sub reexport {
     my $class = _find_export_class( \@_ );
     $class->export_meta->reexport( @_ );
@@ -128,9 +137,13 @@ sub parser {
 sub options {
     my $class = _find_export_class( \@_ );
     my $meta = $class->export_meta;
-    for my $opt ( @_ ) {
-        $meta->options->{$opt} = 1;
-    }
+    $meta->add_options(@_);
+}
+
+sub arguments {
+    my $class = _find_export_class( \@_ );
+    my $meta = $class->export_meta;
+    $meta->add_arguments(@_);
 }
 
 sub _export {
@@ -143,7 +156,7 @@ sub _export {
         unless $ref;
 
     ( my $type, $name ) = ($name =~ m/^([\$\@\&\%]?)(.*)$/);
-    $type = undef if $type eq '&';
+    $type = "" if $type eq '&';
 
     my $fullname = "$type$name";
 

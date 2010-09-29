@@ -4,14 +4,16 @@ use warnings;
 
 use Scalar::Util qw/blessed reftype/;
 use Carp qw/croak/;
+use aliased 'Exporter::Declare::Export::Sub';
 
 sub new {
     my $class = shift;
     my ( $package ) = @_;
+    my ( $alias ) = ( $package =~ m/([^:]+)$/ );
     my $self = bless([
         $package,
         {}, #exports
-        { default => [], all => [] }, #tags
+        { default => [], all => [], alias => [ $alias ] }, #tags
         {}, #parsers
         { prefix => 1, suffix => 1 }, #options
     ], $class);
@@ -20,6 +22,8 @@ sub new {
         no strict 'refs';
         *{$self->package . '::export_meta'} = sub { $self };
     }
+
+    $self->add_export( $alias, Sub->new( sub { $package }, exported_by => $package ));
 
     return $self;
 }
@@ -81,10 +85,19 @@ sub is_tag {
 sub get_tag {
     my $self = shift;
     my ( $name ) = @_;
-    @{ $self->_export_tags->{$name}}
+    @{ $self->_export_tags->{$name} || []}
 }
 
 sub add_options {
+    my $self = shift;
+    for my $name ( @_ ) {
+        croak "'$name' is already an export tag and can't be used as an option."
+            if $self->is_tag($name);
+        $self->_options->{$name} = 0;
+    }
+}
+
+sub add_argumenets {
     my $self = shift;
     for my $name ( @_ ) {
         croak "'$name' is already an export tag and can't be used as an option."
@@ -94,6 +107,13 @@ sub add_options {
 }
 
 sub is_option {
+    my $self = shift;
+    my ( $option ) = @_;
+    return defined $self->_options->{$option}
+               && !$self->_options->{$option};
+}
+
+sub is_argument {
     my $self = shift;
     my ( $option ) = @_;
     return $self->_options->{$option};
@@ -114,6 +134,8 @@ sub get_parser {
 sub get_ref_from_package {
     my $self = shift;
     my ( $item ) = @_;
+    use Carp qw/confess/;
+    confess unless $item;
     my ( $type, $name ) = ($item =~ m/^([\&\@\%\$]?)(.*)$/);
     $type ||= '&';
     my $fullname = "$type$name";
