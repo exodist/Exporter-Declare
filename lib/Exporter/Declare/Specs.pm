@@ -45,15 +45,13 @@ sub _process {
 
         if ( $item =~ m/^(!?)[:-](.*)$/ ) {
             my ( $neg, $param ) = ( $1, $2 );
-            my $has_arg = $self->package->export_meta->is_argument( $param )
-                       || ref $args[0];
-            if ( $has_arg ) {
+            if ( $self->package->export_meta->is_argument( $param )) {
                 $self->config->{$param} = shift( @args );
                 $argnum++;
                 next;
             }
             else {
-                $self->config->{$param} = !$neg;
+                $self->config->{$param} = ref( $args[0] ) ? $args[0] : !$neg;
             }
         }
 

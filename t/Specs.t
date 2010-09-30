@@ -33,7 +33,7 @@ $META->add_export(
 $META->push_tag( 'xxx', qw/x $y @z/ );
 $META->push_tag( 'yyy', qw/X $Y @Z/ );
 
-$META->add_options( 'foo' );
+$META->add_arguments( 'foo' );
 
 tests construction => sub {
     my $spec = $CLASS->new( TestPackage );
@@ -148,7 +148,7 @@ tests acceptance => sub {
         {
             foo => 'bar',
             prefix => 'aaa_',
-            yyy => 1,
+            yyy => { -prefix => 'uhg_', -suffix => '_blarg' },
             xxx => '',
         },
         "Config"

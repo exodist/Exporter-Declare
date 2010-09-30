@@ -45,6 +45,14 @@ sub _check_parts {
 
 sub sort_parts {
     my $self = shift;
+
+    if ($self->parts->[0] =~ m/^[\%\$\&\@]/) {
+        $self->parts->[0] = [
+            $self->parts->[0],
+            undef,
+        ];
+    }
+
     $self->bail(
         "Parsing Error, unrecognized tokens: "
         . join( ', ', map {"'$_'"} $self->has_non_string_or_quote_parts )

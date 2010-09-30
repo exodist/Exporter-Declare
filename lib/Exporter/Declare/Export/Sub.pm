@@ -22,6 +22,7 @@ sub inject {
     }
     else {
         require Devel::Declare::Interface;
+        require Exporter::Declare::Parser;
         Devel::Declare::Interface::enhance(
             $class,
             $name,

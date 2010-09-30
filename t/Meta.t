@@ -13,20 +13,17 @@ tests construction => sub {
     my $meta = $CLASS->new('FakePackage');
     isa_ok( $meta, $CLASS );
     is( FakePackage->export_meta, $meta, "Linked" );
-    is_deeply(
-        $meta,
-        [
-            'FakePackage',
-            {},
-            { default => [], all => [] },
-            {},
-            { suffix => 1, prefix => 1 },
-        ],
-        "Correct attributes"
-    );
     is( $meta->package, 'FakePackage', "Got package" );
-    is_deeply( $meta->_exports, {}, "Got export hash" );
-    is_deeply( $meta->_export_tags, { default => [], all => [] }, "Got export tags" );
+    is_deeply(
+        $meta->_exports,
+        { '&FakePackage' => $meta->get_export('FakePackage') },
+        "Got export hash"
+    );
+    is_deeply(
+        $meta->_export_tags,
+        { default => [], all => [ '&FakePackage' ], alias => ['FakePackage'] },
+        "Got export tags"
+    );
     is_deeply( $meta->_parsers, {}, "Got parser list" );
     is_deeply( $meta->_options, { suffix => 1, prefix => 1 }, "Got options list" );
 };
@@ -35,10 +32,10 @@ tests tags => sub {
     my $meta = $CLASS->new('FakeTagPackage');
     is_deeply(
         $meta->_export_tags,
-        { default => [], all => [] },
+        { default => [], all => [ '&FakeTagPackage' ], alias => ['FakeTagPackage'] },
         "Export tags"
     );
-    is_deeply( [$meta->get_tag('all')],     [], ':all is empty list'     );
+    is_deeply( [$meta->get_tag('all')],     [ '&FakeTagPackage' ], ':all only has alias' );
     is_deeply( [$meta->get_tag('default')], [], ':default is empty list' );
 
     $meta->push_tag( 'a', qw/a b c d/ );
@@ -54,24 +51,20 @@ tests tags => sub {
 
 tests exports => sub {
     my $meta = $CLASS->new('FakeExportPackage');
-    is_deeply( $meta->_exports, {}, "No exports" );
 
     my $code_no_sigil = Sub->new(sub {}, exported_by => 'FakeExportPackage' );
     $meta->add_export( 'code_no_sigil', $code_no_sigil);
     is_deeply(
-        $meta->_exports,
-        { '&code_no_sigil' => $code_no_sigil },
+        $meta->_exports->{ '&code_no_sigil' },
+        $code_no_sigil,
         "Added export without sigil as code"
     );
 
     my $code_with_sigil = Sub->new(sub {}, exported_by => 'FakeExportPackage' );
     $meta->add_export( '&code_with_sigil', $code_with_sigil);
     is_deeply(
-        $meta->_exports,
-        {
-            '&code_no_sigil' => $code_no_sigil,
-            '&code_with_sigil' => $code_with_sigil,
-        },
+        $meta->_exports->{ '&code_with_sigil' },
+        $code_with_sigil,
         "Added code export"
     );
 
@@ -88,6 +81,7 @@ tests exports => sub {
     is_deeply(
         $meta->_exports,
         {
+            '&FakeExportPackage' => $meta->get_export( 'FakeExportPackage' ),
             '&code_no_sigil'   => $code_no_sigil,
             '&code_with_sigil' => $code_with_sigil,
             '$scalar'          => $scalar,

@@ -28,6 +28,20 @@ sub new {
     return $self;
 }
 
+sub new_from_exporter {
+    my $class = shift;
+    my ( $exporter ) = @_;
+    my $self = $class->new( $exporter );
+    my %seen;
+    my $exports = $self->get_ref_from_package('@EXPORT');
+    my $export_oks = $self->get_ref_from_package('@EXPORT_OK');
+    my $tags = $self->get_ref_from_package('%EXPORT_TAGS');
+    $self->add_export( $_ ) for grep { !$seen{$_}++ } @$exports, @$export_oks;
+    $self->push_tag( 'default', @$export_oks );
+    $self->push_tag( $_, $tags->{$_} ) for keys %$tags;
+    return $self;
+}
+
 sub package      { shift->[0] }
 sub _exports     { shift->[1] }
 sub _export_tags { shift->[2] }
@@ -97,7 +111,7 @@ sub add_options {
     }
 }
 
-sub add_argumenets {
+sub add_arguments {
     my $self = shift;
     for my $name ( @_ ) {
         croak "'$name' is already an export tag and can't be used as an option."
@@ -147,6 +161,25 @@ sub get_ref_from_package {
     return( \@{ $ref }, $fullname ) if $type eq '@';
     return( \%{ $ref }, $fullname ) if $type eq '%';
     croak "'$item' cannot be exported"
+}
+
+sub reexport {
+    my $self = shift;
+    my ( $exporter ) = @_;
+    my $meta = $exporter->can( 'export_meta' )
+        ? $exporter->export_meta()
+        : __PACKAGE__->new_from_exporter( $exporter );
+    $self->merge( $meta );
+}
+
+sub merge {
+    my $self = shift;
+    my $meta = ( @_ );
+    $self->add_export( $_, $meta->_exports->{ $_ })
+        for keys %{ $meta->_exports };
+
+    $self->push_tags( $_, @{ $meta->_export_tags->{ $_ }} )
+        for grep { $_ ne 'all' } keys %{ $meta->_export_tags };
 }
 
 1;
