@@ -552,7 +552,7 @@ Same as parsed_exports(), except exports are added to the -default tag.
 
 =item parser name => \&code
 
-Define a parser. You need to be familiar with Devel::Declare to make use fo
+Define a parser. You need to be familiar with Devel::Declare to make use of
 this.
 
 =item reexport( $package )

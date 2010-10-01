@@ -104,6 +104,47 @@ tests generator => sub {
     is( blah(), 2, "Generated again" );
 };
 
+tests tags_options_and_exports => sub {
+    is_deeply(
+        [ sort keys %{ Export::Stuff->export_meta->_exports }],
+        [ sort qw/ $Y &b $X &a &Stuff $Z &c &baz &eexport &gexp &defgen /],
+        "All exports accounted for"
+    );
+    is_deeply(
+        [ sort @{ Export::Stuff->export_meta->_export_tags->{default} }],
+        [ sort qw/ $X a defgen /],
+        "Default Exports"
+    );
+    is_deeply(
+        [ sort @{ Export::Stuff->export_meta->_export_tags->{all} }],
+        [ sort qw/ $Y &b $X &a &Stuff $Z &c &baz &eexport &gexp &defgen /],
+        "All Exports"
+    );
+    is_deeply(
+        Export::Stuff->export_meta->_options,
+        {
+            xxx => 0,
+            yyy => 0,
+            foo => 1,
+            bar => 1,
+            suffix => 1,
+            prefix => 1,
+        },
+        "Options"
+    );
+    is_deeply(
+        Export::Stuff->export_meta->_export_tags,
+        {
+            alias => [ 'Stuff' ],
+            vars => [qw/ $X $Y /],
+            subs => [qw/ a b /],
+            # These are checked elsware
+            default => Export::Stuff->export_meta->_export_tags->{'default'},
+            all => Export::Stuff->export_meta->_export_tags->{all}
+        },
+        "Extra tags"
+    );
+};
 
 run_tests;
 done_testing;
