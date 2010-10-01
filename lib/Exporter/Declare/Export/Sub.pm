@@ -13,11 +13,12 @@ sub inject {
     return unless $self->parser;
 
     my $parser_sub = $self->exported_by->export_meta->get_parser( $self->parser );
-    if ( my $parser_sub ) {
+
+    if ( $parser_sub ) {
         require Devel::Declare;
         Devel::Declare->setup_for(
             $class,
-            { method => { const => $parser_sub } }
+            { $name => { const => $parser_sub } }
         );
     }
     else {

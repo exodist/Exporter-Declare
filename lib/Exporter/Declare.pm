@@ -131,16 +131,17 @@ sub gen_default_export {
 
 sub parser {
     my $class = _find_export_class( \@_ );
-    my ( $name, $code, $bad ) = @_;
+    my $name = shift;
+    my $code = pop;
     croak "You must provide a name to parser()"
         if !$name || ref $name;
     croak "Too many parameters passed to parser()"
-        if $bad;
+        if @_ && defined $_[0];
     $code ||= $class->can( $name );
     croak "Could not find code for parser '$name'"
         unless $code;
 
-    $class->export_meta->parsers->{ $name } = $code;
+    $class->export_meta->_parsers->{ $name } = $code;
 }
 
 sub import_options {
