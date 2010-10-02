@@ -13,7 +13,7 @@ use aliased 'Exporter::Declare::Export::Generator';
 
 BEGIN { Meta->new( __PACKAGE__ )}
 
-our $VERSION = '0.100';
+our $VERSION = '0.101';
 
 default_exports( qw/
     import

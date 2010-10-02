@@ -14,7 +14,7 @@ my $build = Module::Build->new(
         'Scalar::Util' => 0,
         'aliased' => 0,
     },
-    test_requires => {
+    build_requires => {
         'Test::Simple' => 0.88,
         'Fennec::Lite' => '0.004',
         'Test::Exception' => 0,
