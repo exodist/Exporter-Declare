@@ -48,6 +48,27 @@ Exporter::Declare::Export::Sub - Export class for subs which are exported.
 Export class for subs which are exported. Overrides inject() in order to hook
 into L<Devel::Declare> on parsed exports.
 
+=head1 OVERRIDEN METHODS
+
+=over 4
+
+=item $export->inject( $class, $name );
+
+Inject the sub, and apply the L<Devel::Declare> magic.
+
+=back
+
+=head1 NEW METHODS
+
+=over 4
+
+=item $parser_name = export->parser()
+
+Get the name of the parse this sub should use with L<Devel::Declare> empty when
+no parse should be used.
+
+=back
+
 =head1 AUTHORS
 
 Chad Granum L<exodist7@gmail.com>

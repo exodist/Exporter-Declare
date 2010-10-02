@@ -16,14 +16,13 @@ DESCRIPTION
     following:
 
     Declarative Exporting (Like Moose for Exporting)
-    Meta Class That Stores Per-Exporter Meta Data
-    Highly Customisable Import Process
+    Meta Class Instead of Package Variables
+    Hooks Into import()
     Support For Export Groups (tags)
-    No Dependance On Package Variables
-    Export Generators (Code And Variables)
+    Export Generators (Subs And Variables)
     Higher Level Interface To Devel::Declare
     Clear And Concise OO API
-    All Exports Are Blessed For Enhancement
+    All Exports Are Blessed
     Extended Import Syntax Based On Sub::Exporter
     The '-alias' Tag Can Be Used On Any Exporter To Generate An Alias
 
@@ -157,8 +156,8 @@ IMPORT INTERFACE
   SELECTING ITEMS TO IMPORT
     Exports can be subs, or package variables (scalar, hash, array). For
     subs simply ask for the sub by name, you may optionally prefix the subs
-    name with the sub sigil "&" &. For variables list the variable name
-    along with its sigil "$, %, or @".
+    name with the sub sigil "&". For variables list the variable name along
+    with its sigil "$, %, or @".
 
         use Some::Exporter qw/ somesub $somescalar %somehash @somearray /;
 
@@ -176,15 +175,15 @@ IMPORT INTERFACE
 
     -alias
         Every package has an alias that it can export. This is the last
-        segmant of the packages namespace. IE "My::Log::Package::Name::Foo"
-        could export the "Foo()" function. These alias function simply
+        segmant of the packages namespace. IE "My::Long::Package::Name::Foo"
+        could export the "Foo()" function. These alias functionis simply
         return the full package name as a string, in this case
-        'My::Log::Package::Name::Foo'. This is similar to aliased.
+        'My::Long::Package::Name::Foo'. This is similar to aliased.
 
         The -alias tag is a shortcut so that you do not need to think about
         what the alias name would be when adding it to the import arguments.
 
-            use My::Log::Package::Name::Foo -alias;
+            use My::Long::Package::Name::Foo -alias;
 
             my $foo = Foo()->new(...);
 
@@ -192,10 +191,12 @@ IMPORT INTERFACE
     You can prefix, suffix, or completely rename the items you import.
     Whenever an item is followed by a hash in the import list, that hash
     will be used for configuration. Configuration items always start with a
-    dash "-". The 3 available configuration options that effect import names
-    are "-prefix", "-suffix", and "-as". If "-as" is seen it will be used as
-    is. If prefix or suffix are seen they will be attached to the original
-    name.
+    dash "-".
+
+    The 3 available configuration options that effect import names are
+    "-prefix", "-suffix", and "-as". If "-as" is seen it will be used as is.
+    If prefix or suffix are seen they will be attached to the original name
+    (unless -as is present in which case they are ignored).
 
         use Some::Exporter subA => { -as => 'DoThing' },
                            subB => { -prefix => 'my_', -suffix => '_ok' };
@@ -301,11 +302,13 @@ EXTENDED EXPORT API
     parser name { ... }
     parser name => \&code
         Define a parser. You need to be familiar with Devel::Declare to make
-        use fo this.
+        use of this.
 
     reexport( $package )
         Make this exporter inherit all the exports and tags of $package.
         Works for Exporter::Declare or Exporter.pm based exporters.
+        Re-Exporting of Sub::Exporter based classes is not currently
+        supported.
 
     export_to( $package, @args )
         Export to the specified class.

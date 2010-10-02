@@ -146,7 +146,52 @@ sub _get_tag {
 
 =head1 NAME
 
+Exporter::Declare::Specs - Import argument parser for Exporter::Declare
+
 =head1 DESCRIPTION
+
+Import arguments cna get complicated. All arguments are assumed to be exports
+unless they have a - or : prefix. The prefix may denote a tag, a boolean
+option, or an option that takes the next argument as a value. In addition
+almost all these can be negated with the ! prefix.
+
+This class takes care of parsing the import arguments and generating data
+structures that can be used to find what the exporter needs to know.
+
+=head1 METHODS
+
+=over 4
+
+=item $class->new( $package, @args )
+
+Create a new instance and parse @args.
+
+=item $specs->package()
+
+Get the name of the package that should do the exporting.
+
+=item $hashref = $specs->config()
+
+Get the configuration hash, All specified options and tags are the keys. The
+value will be true/false/undef for tags/boolean options. For options that take
+arguments the value will be that argument. When a config hash is provided to a
+tag it will be the value.
+
+=item $hashref = $specs->exports()
+
+Get the exports hash. The keys are names of the exports. Values are an array
+containing the export, item specific config hash, and arguments array. This is
+generally not intended for direct consumption.
+
+=item $arrayref = $specs->excludes()
+
+Get the arrayref containing the names of all excluded exports.
+
+=item $specs->export( $package )
+
+Do the actual exporting. All exports will be injected into $package.
+
+=back
 
 =head1 AUTHORS
 

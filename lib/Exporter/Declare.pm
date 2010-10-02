@@ -199,8 +199,9 @@ sub _find_export_class {
 }
 
 sub reexport {
-    my $class = _find_export_class( \@_ );
-    $class->export_meta->reexport( $_ ) for @_;
+    my $from = pop;
+    my $class = shift || caller;
+    $class->export_meta->reexport( $from );
 }
 
 1;
@@ -227,21 +228,19 @@ Exporter declare solves these problems and more by providing the following:
 
 =item Declarative Exporting (Like L<Moose> for Exporting)
 
-=item Meta Class That Stores Per-Exporter Meta Data
+=item Meta Class Instead of Package Variables
 
-=item Highly Customisable Import Process
+=item Hooks Into import()
 
 =item Support For Export Groups (tags)
 
-=item No Dependance On Package Variables
-
-=item Export Generators (Code And Variables)
+=item Export Generators (Subs And Variables)
 
 =item Higher Level Interface To L<Devel::Declare>
 
 =item Clear And Concise OO API
 
-=item All Exports Are Blessed For Enhancement
+=item All Exports Are Blessed
 
 =item Extended Import Syntax Based On L<Sub::Exporter>
 
@@ -385,7 +384,7 @@ value.
 
 Exports can be subs, or package variables (scalar, hash, array). For subs
 simply ask for the sub by name, you may optionally prefix the subs name with
-the sub sigil C<&> &. For variables list the variable name along with its sigil
+the sub sigil C<&>. For variables list the variable name along with its sigil
 C<$, %, or @>.
 
     use Some::Exporter qw/ somesub $somescalar %somehash @somearray /;
@@ -410,14 +409,15 @@ no argument is provided to import.
 =item -alias
 
 Every package has an alias that it can export. This is the last segmant of the
-packages namespace. IE C<My::Log::Package::Name::Foo> could export the C<Foo()>
-function. These alias function simply return the full package name as a string,
-in this case C<'My::Log::Package::Name::Foo'>. This is similar to L<aliased>.
+packages namespace. IE C<My::Long::Package::Name::Foo> could export the C<Foo()>
+function. These alias functionis simply return the full package name as a
+string, in this case C<'My::Long::Package::Name::Foo'>. This is similar to
+L<aliased>.
 
 The -alias tag is a shortcut so that you do not need to think about what the
 alias name would be when adding it to the import arguments.
 
-    use My::Log::Package::Name::Foo -alias;
+    use My::Long::Package::Name::Foo -alias;
 
     my $foo = Foo()->new(...);
 
@@ -427,10 +427,12 @@ alias name would be when adding it to the import arguments.
 
 You can prefix, suffix, or completely rename the items you import. Whenever an
 item is followed by a hash in the import list, that hash will be used for
-configuration. Configuration items always start with a dash C<->. The 3
-available configuration options that effect import names are C<-prefix>,
+configuration. Configuration items always start with a dash C<->.
+
+The 3 available configuration options that effect import names are C<-prefix>,
 C<-suffix>, and C<-as>. If C<-as> is seen it will be used as is. If prefix or
-suffix are seen they will be attached to the original name.
+suffix are seen they will be attached to the original name (unless -as is
+present in which case they are ignored).
 
     use Some::Exporter subA => { -as => 'DoThing' },
                        subB => { -prefix => 'my_', -suffix => '_ok' };
@@ -559,7 +561,8 @@ this.
 =item reexport( $package )
 
 Make this exporter inherit all the exports and tags of $package. Works for
-Exporter::Declare or Exporter.pm based exporters.
+Exporter::Declare or Exporter.pm based exporters. Re-Exporting of
+L<Sub::Exporter> based classes is not currently supported.
 
 =item export_to( $package, @args )
 
