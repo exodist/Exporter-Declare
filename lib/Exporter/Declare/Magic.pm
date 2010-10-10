@@ -4,6 +4,7 @@ use warnings;
 
 use Devel::Declare::Parser;
 use aliased 'Exporter::Declare::Magic::Sub';
+use aliased 'Exporter::Declare::Export::Generator';
 use Carp qw/croak/;
 our @CARP_NOT = qw/
     Exporter::Declare
@@ -42,21 +43,40 @@ parsed_default_exports( export => qw/
 
 Exporter::Declare::Meta->add_hash_metric( 'parsers' );
 
-BEGIN {
-    # We want to wrap the original functions so that we do not re-bless them.
-    my @subs = qw/export gen_export default_export gen_default_export /;
-    for my $sub ( @subs ) {
-        no strict 'refs';
-        *$sub = sub { goto &{"ed_$sub"} }
-    }
+sub export {
+    my $class = Exporter::Declare::_find_export_class( \@_ );
+    _export( $class, undef, @_ );
+}
+
+sub gen_export {
+    my $class = Exporter::Declare::_find_export_class( \@_ );
+    _export( $class, Generator(), @_ );
+}
+
+sub default_export {
+    my $class = Exporter::Declare::_find_export_class( \@_ );
+    my $meta = $class->export_meta;
+    $meta->export_tags_push( 'default', _export( $class, undef, @_ ));
+}
+
+sub gen_default_export {
+    my $class = Exporter::Declare::_find_export_class( \@_ );
+    my $meta = $class->export_meta;
+    $meta->export_tags_push( 'default', _export( $class, Generator(), @_ ));
 }
 
 sub _export {
     my %params = Exporter::Declare::_parse_export_params( @_ );
     my ($parser) = @{ $params{args} };
     if ( $parser ) {
-        $params{export_class} = Sub();
-        $params{extra_exporter_props} = { parser => $parser };
+        my $ec = $params{export_class};
+        if ( $ec && $ec eq Generator ) {
+            $params{extra_exporter_props} = { parser => $parser, type => Sub };
+        }
+        else {
+            $params{export_class} = Sub;
+            $params{extra_exporter_props} = { parser => $parser };
+        }
     }
     Exporter::Declare::_add_export( %params );
 }

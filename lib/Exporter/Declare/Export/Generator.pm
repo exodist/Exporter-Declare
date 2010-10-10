@@ -36,6 +36,11 @@ sub generate {
     return Exporter::Declare::Export::Variable->new(
         $ref,
         %{ $self->_data },
+    ) if $self->type eq 'variable';
+
+    return $self->type->new(
+        $ref,
+        %{ $self->_data },
     );
 }
 

@@ -19,7 +19,7 @@ BEGIN {
 
 {
     package Export::Stuff;
-    use Exporter::Declare '-magic';
+    use Exporter::Declare qw/-magic/;
     use Fennec::Lite;
     BEGIN {
         can_ok( __PACKAGE__, qw/
@@ -136,7 +136,7 @@ tests magic_import => sub {
     package MyMagic;
     use strict;
     use warnings;
-    use Exporter::Declare '-magic';
+    use Exporter::Declare qw/-magic -all/;
     use Fennec::Lite;
 
     sub xxx { 'xxx' }

@@ -152,7 +152,8 @@ sub new_from_exporter {
         }
         [ $name, $ref ];
     } grep { !$seen{$_}++ } @$exports, @$export_oks;
-    $self->export_tags_push( 'default', @$exports );
+    $self->export_tags_push( 'default', @$exports )
+        if @$exports;
     $self->export_tags_push( $_, $tags->{$_} ) for keys %$tags;
     return $self;
 }
