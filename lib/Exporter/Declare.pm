@@ -3,7 +3,6 @@ use strict;
 use warnings;
 
 use Carp qw/croak/;
-use Devel::Declare::Parser::Sublike;
 use Scalar::Util qw/reftype/;
 use aliased 'Exporter::Declare::Meta';
 use aliased 'Exporter::Declare::Specs';
@@ -13,7 +12,13 @@ use aliased 'Exporter::Declare::Export::Generator';
 
 BEGIN { Meta->new( __PACKAGE__ )}
 
-our $VERSION = '0.101';
+our $VERSION = '0.102';
+our @CARP_NOT = qw/
+    Exporter::Declare
+    Exporter::Declare::Specs
+    Exporter::Declare::Meta
+    Exporter::Declare::Magic
+/;
 
 default_exports( qw/
     import
@@ -22,32 +27,22 @@ default_exports( qw/
     import_options
     import_arguments
     export_tag
+    export
+    gen_export
+    default_export
+    gen_default_export
 /);
 
 exports( qw/
-    parsed_exports
-    parsed_default_exports
     reexport
     export_to
 /);
 
-parsed_exports( export => qw/
-    export
-    gen_export
-    default_export
-    gen_default_export
-    parser
-/);
-
 export_tag( magic => qw/
-    -default
-    export
-    gen_export
-    default_export
-    gen_default_export
-    parser
-    parsed_exports
-    parsed_default_exports
+    !export
+    !gen_export
+    !default_export
+    !gen_default_export
 /);
 
 sub import {
@@ -62,11 +57,23 @@ sub after_import {
     my $class = shift;
     my ( $caller, $specs ) = @_;
     Meta->new( $caller );
+
+    return unless my $args = $specs->config->{ 'magic' };
+    $args = ['-default'] unless ref $args && ref $args eq 'ARRAY';
+
+    require Exporter::Declare::Magic;
+    export_to( 'Exporter::Declare::Magic', $caller, @$args );
 }
 
 sub export_to {
     my $class = _find_export_class( \@_ );
     my ( $dest, @args ) = @_;
+
+    # XXX This is ugly!
+    unshift @args => '-default'
+        if $class eq __PACKAGE__
+        && grep { $_ eq '-magic' } @args;
+
     my $specs = Specs->new( $class, @args );
     $specs->export( $dest );
     return $specs;
@@ -75,36 +82,22 @@ sub export_to {
 sub export_tag {
     my $class = _find_export_class( \@_ );
     my ( $tag, @list ) = @_;
-    $class->export_meta->push_tag( $tag, @list );
+    $class->export_meta->export_tags_push( $tag, @list );
 }
 
 sub exports {
     my $class = _find_export_class( \@_ );
     my $meta = $class->export_meta;
     _export( $class, undef, $_ ) for @_;
-    $meta->get_tag('all');
+    $meta->export_tags_get('all');
 }
 
 sub default_exports {
     my $class = _find_export_class( \@_ );
     my $meta = $class->export_meta;
-    $meta->push_tag( 'default', _export( $class, undef, $_ ))
+    $meta->export_tags_push( 'default', _export( $class, undef, $_ ))
         for @_;
-    $meta->get_tag('default');
-}
-
-sub parsed_exports {
-    my $class = _find_export_class( \@_ );
-    my ( $parser, @items ) = @_;
-    croak "no parser specified" unless $parser;
-    export( $class, $_, $parser ) for @items;
-}
-
-sub parsed_default_exports {
-    my $class = _find_export_class( \@_ );
-    my ( $parser, @names ) = @_;
-    croak "no parser specified" unless $parser;
-    default_export( $class, $_, $parser ) for @names;
+    $meta->export_tags_get('default');
 }
 
 sub export {
@@ -120,46 +113,30 @@ sub gen_export {
 sub default_export {
     my $class = _find_export_class( \@_ );
     my $meta = $class->export_meta;
-    $meta->push_tag( 'default', _export( $class, undef, @_ ));
+    $meta->export_tags_push( 'default', _export( $class, undef, @_ ));
 }
 
 sub gen_default_export {
     my $class = _find_export_class( \@_ );
     my $meta = $class->export_meta;
-    $meta->push_tag( 'default', _export( $class, Generator(), @_ ));
-}
-
-sub parser {
-    my $class = _find_export_class( \@_ );
-    my $name = shift;
-    my $code = pop;
-    croak "You must provide a name to parser()"
-        if !$name || ref $name;
-    croak "Too many parameters passed to parser()"
-        if @_ && defined $_[0];
-    $code ||= $class->can( $name );
-    croak "Could not find code for parser '$name'"
-        unless $code;
-
-    $class->export_meta->_parsers->{ $name } = $code;
+    $meta->export_tags_push( 'default', _export( $class, Generator(), @_ ));
 }
 
 sub import_options {
     my $class = _find_export_class( \@_ );
     my $meta = $class->export_meta;
-    $meta->add_options(@_) if @_;
+    $meta->options_add($_) for @_;
 }
 
 sub import_arguments {
     my $class = _find_export_class( \@_ );
     my $meta = $class->export_meta;
-    $meta->add_arguments(@_) if @_;
+    $meta->arguments_add($_) for @_;
 }
 
-sub _export {
+sub _parse_export_params {
     my ( $class, $expclass, $name, @param ) = @_;
     my $ref = ref($param[-1]) ? pop(@param) : undef;
-    my ( $parser ) = @param;
     my $meta = $class->export_meta;
 
     ( $ref, $name ) = $meta->get_ref_from_package( $name )
@@ -170,22 +147,42 @@ sub _export {
 
     my $fullname = "$type$name";
 
-    $expclass ||= reftype( $ref ) eq 'CODE'
+    return (
+        class => $class,
+        export_class => $expclass || undef,
+        name => $name,
+        ref => $ref,
+        type => $type || "",
+        fullname => $fullname,
+        args => \@param,
+    );
+}
+
+sub _export {
+    _add_export( _parse_export_params( @_ ));
+}
+
+sub _add_export {
+    my %params = @_;
+    my $meta = $params{class}->export_meta;
+    $params{ export_class } ||= reftype( $params{ref} ) eq 'CODE'
         ? Sub()
         : Variable();
 
-    $expclass->new(
-        $ref,
-        exported_by => $class,
-        ($parser ? ( parser => $parser    )
-                 : (                      )),
-        ($type   ? ( type   => 'variable' )
-                 : ( type   => 'sub'      )),
+    $params{ export_class }->new(
+        $params{ ref },
+        exported_by => $params{ class },
+        ($params{ type } ? ( type   => 'variable' )
+                         : ( type   => 'sub'      )),
+        ($params{ extra_exporter_props }
+            ? %{ $params{ extra_exporter_props }}
+            : ()
+        ),
     );
 
-    $meta->add_export( $fullname, $ref );
+    $meta->exports_add( $params{fullname}, $params{ref} );
 
-    return $fullname;
+    return $params{fullname};
 }
 
 sub _find_export_class {
@@ -236,8 +233,6 @@ Exporter declare solves these problems and more by providing the following:
 
 =item Export Generators (Subs And Variables)
 
-=item Higher Level Interface To L<Devel::Declare>
-
 =item Clear And Concise OO API
 
 =item All Exports Are Blessed
@@ -264,6 +259,25 @@ Exporter declare solves these problems and more by providing the following:
     import_options   qw/ optionA optionB /;
     import_arguments qw/ optionC optionD /;
 
+    export anon_export => sub { ... };
+    export '@anon_var' => [...];
+
+    default_export a_default => sub { 'default!' }
+
+    our $X = "x";
+    default_export '$X';
+
+    my $iterator = 'a';
+    gen_export unique_class_id => sub {
+        my $current = $iterator++;
+        return sub { $current };
+    };
+
+    gen_default_export '$my_letter' => sub {
+        my $letter = $iterator++;
+        return \$letter;
+    };
+
     # No need to fiddle with import() or do any wrapping.
     # No need to parse the arguments yourself!
 
@@ -271,10 +285,10 @@ Exporter declare solves these problems and more by providing the following:
         my $class = shift;
         my ( $importer, $specs ) = @_;
 
-        do_option_a() if $specs->config->{optionA}
+        do_option_a() if $specs->config->{optionA};
 
         do_option_c( $specs->config->{optionC} )
-            if $specs->config->{optionC}
+            if $specs->config->{optionC};
 
         print "-subs tag was used\n"
             if $specs->config->{subs};
@@ -299,59 +313,6 @@ Exporter declare solves these problems and more by providing the following:
     my_do_the_thing();
 
     ...
-
-=head2 ADVANCED EXPORTER
-
-    package Some::Exporter;
-    use Exporter::Declare qw/-magic reexport export_to /;
-
-    ... #Same as the basic exporter synopsis
-
-    Quoting is not necessary unless you have space or special characters
-    export another_sub;
-    export parsed_sub parser;
-
-    # no 'sub' keyword, not a typo
-    export anonymous_export {
-        ...
-    }
-    #No semicolon, not a typo
-
-    export parsed_anon parser {
-        ...
-    }
-
-    # Same as export
-    default_export name { ... }
-
-    export $VAR;
-    export %VAR;
-
-    # $ref can be a ref to code, hash, array, or scalar.
-    export name => $ref;
-
-    my $iterator = 'a';
-    gen_export unique_class_id {
-        my $current = $iterator++;
-        return sub { $current };
-    }
-
-    gen_default_export '$my_letter' {
-        my $letter = $iterator++;
-        return \$letter;
-    }
-
-    parser myparser {
-        ... See Devel::Declare
-    }
-
-    parsed_exports parser => qw/ parsed_sub_a parsed_sub_b /;
-    parsed_default_exports parser_b => qw/ parsed_sub_c /;
-
-    # Can re-export other Exporter::Declare exports, or even Exporter.pm based exports
-    reexport 'Another::Exporter';
-
-    export_to( $some_class, @args );
 
 =head1 IMPORT INTERFACE
 
@@ -541,23 +502,6 @@ only work in function form.
 
 =over 4
 
-=item parsed_exports( $parser, @exports )
-
-Add exports that should use a 'Devel::Declare' based parser. The parser should
-be the name of a registered L<Devel::Declare::Interface> parser, or the name of
-a parser sub created using the parser() function.
-
-=item parsed_default_exports( $parser, @exports )
-
-Same as parsed_exports(), except exports are added to the -default tag.
-
-=item parser name { ... }
-
-=item parser name => \&code
-
-Define a parser. You need to be familiar with Devel::Declare to make use of
-this.
-
 =item reexport( $package )
 
 Make this exporter inherit all the exports and tags of $package. Works for
@@ -572,87 +516,39 @@ Export to the specified class.
 
 =item export( $name, $ref )
 
-=item export( $name, $parser )
-
-=item export( $name, $parser, $ref )
-
-=item export name { ... }
-
-=item export name parser { ... }
-
 export is a keyword that lets you export any 1 item at a time. The item can be
-exported by name, name+ref, or name+parser+ref. You can also use it without
-parentheses or quotes followed by a codeblock. In the codeblock form the export
-is created, but there is no corresponding variable/sub in the packages
-namespace.
+exported by name, or name + ref. When a ref is provided, the export is created,
+but there is no corresponding variable/sub in the packages namespace.
 
 =item default_export( $name )
 
 =item default_export( $name, $ref )
 
-=item default_export( $name, $parser )
-
-=item default_export( $name, $parser, $ref )
-
-=item default_export name { ... }
-
-=item default_export name parser { ... }
-
 =item gen_export( $name )
 
 =item gen_export( $name, $ref )
 
-=item gen_export( $name, $parser )
-
-=item gen_export( $name, $parser, $ref )
-
-=item gen_export name { ... }
-
-=item gen_export name parser { ... }
-
 =item gen_default_export( $name )
 
 =item gen_default_export( $name, $ref )
-
-=item gen_default_export( $name, $parser )
-
-=item gen_default_export( $name, $parser, $ref )
-
-=item gen_default_export name { ... }
-
-=item gen_default_export name parser { ... }
 
 These all act just like export(), except that they add subrefs as generators,
 and/or add exports to the -default tag.
 
 =back
 
-=head1 ADDITIONAL TAGS
+=head1 MAGIC
 
-=head2 -magic
+    use Exporter::Declare '-magic';
 
-This brings in the magical (L<Devel::Declare>) functions in addition to the
-default.
+This adds L<Devel::Declare> magic to several functions. It also allows you to
+easily create or use parsers on your own exports. See
+L<Exporter::Declare::Magic> for more details.
 
-=over 4
+You can also provide import arguments to L<Devel::Declare::Magic>
 
-=item -default
-
-=item export
-
-=item gen_export
-
-=item default_export
-
-=item gen_default_export
-
-=item parser
-
-=item parsed_exports
-
-=item parsed_default_exports
-
-=back
+    # Arguments to -magic must be in an arrayref, not a hashref.
+    use Exporter::Declare -magic => [ '-default', '!export', -prefix => 'magic_' ];
 
 =head1 INTERNAL API
 

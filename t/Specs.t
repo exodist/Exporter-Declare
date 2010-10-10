@@ -14,26 +14,26 @@ sub TestPackage { 'TestPackage' }
 
 our $META = Meta->new( TestPackage );
 
-$META->add_export(
+$META->exports_add(
     $_,
     Sub->new( sub {}, exported_by => __PACKAGE__ )
 ) for qw/x X xx XX/;
 
 my %vars;
-$META->add_export(
+$META->exports_add(
     "\$$_",
     Variable->new( \$vars{$_}, exported_by => __PACKAGE__ )
 ) for qw/y Y yy YY/;
 
-$META->add_export(
+$META->exports_add(
     "\@$_",
     Variable->new( [$_], exported_by => __PACKAGE__ )
 ) for qw/z Z zz ZZ/;
 
-$META->push_tag( 'xxx', qw/x $y @z/ );
-$META->push_tag( 'yyy', qw/X $Y @Z/ );
+$META->export_tags_push( 'xxx', qw/x $y @z/ );
+$META->export_tags_push( 'yyy', qw/X $Y @Z/ );
 
-$META->add_arguments( 'foo' );
+$META->arguments_add( 'foo' );
 
 tests construction => sub {
     my $spec = $CLASS->new( TestPackage );
@@ -54,14 +54,14 @@ tests util => sub {
 
     is(
         Exporter::Declare::Specs::_get_item($spec, 'X'),
-        $META->get_export( 'X' ),
-        "_get_export"
+        $META->exports_get( 'X' ),
+        "_exports_get"
     );
 
     is_deeply(
-        [ Exporter::Declare::Specs::_get_tag($spec, 'xxx')],
-        [ $META->get_tag( 'xxx' )],
-        "_get_export"
+        [ Exporter::Declare::Specs::_export_tags_get($spec, 'xxx')],
+        [ $META->export_tags_get( 'xxx' )],
+        "_exports_get"
     );
 };
 
@@ -85,19 +85,19 @@ tests include_list => sub {
     lives_ok { $spec->_include_item( 'XX' ) } "Multiple add is no-op";
     is_deeply(
         $spec->exports,
-        { '&XX' => [ $META->get_export( 'XX' ), {}, [] ]},
+        { '&XX' => [ $META->exports_get( 'XX' ), {}, [] ]},
         "Added export"
     );
     $spec->_include_item( 'XX', { -a => 'a' }, ['a'] );
     is_deeply(
         $spec->exports,
-        { '&XX' => [ $META->get_export( 'XX' ), { a => 'a' }, ['a'] ]},
+        { '&XX' => [ $META->exports_get( 'XX' ), { a => 'a' }, ['a'] ]},
         "Added export config"
     );
     $spec->_include_item( 'XX', { -a => 'a', -b => 'b', x => 'y' }, ['a', 'b'] );
     is_deeply(
         $spec->exports,
-        { '&XX' => [ $META->get_export( 'XX' ), { a => 'a', b => 'b' }, ['a', 'a', 'b', 'x', 'y' ] ]},
+        { '&XX' => [ $META->exports_get( 'XX' ), { a => 'a', b => 'b' }, ['a', 'a', 'b', 'x', 'y' ] ]},
         "combined configs"
     );
 
@@ -105,10 +105,10 @@ tests include_list => sub {
     is_deeply(
         $spec->exports,
         {
-            '&XX' => [ $META->get_export( 'XX' ), { a => 'a', b => 'b' }, [ 'a', 'a', 'b', 'x', 'y' ]],
-            '&x'  => [ $META->get_export( '&x' ), { tag => 1 }, [ 'from tag', 'param', 'p' ]],
-            '$y'  => [ $META->get_export( '$y' ), { tag => 1 }, [ 'from tag', 'param', 'p' ]],
-            '@z'  => [ $META->get_export( '@z' ), { tag => 1 }, [ 'from tag', 'param', 'p' ]],
+            '&XX' => [ $META->exports_get( 'XX' ), { a => 'a', b => 'b' }, [ 'a', 'a', 'b', 'x', 'y' ]],
+            '&x'  => [ $META->exports_get( '&x' ), { tag => 1 }, [ 'from tag', 'param', 'p' ]],
+            '$y'  => [ $META->exports_get( '$y' ), { tag => 1 }, [ 'from tag', 'param', 'p' ]],
+            '@z'  => [ $META->exports_get( '@z' ), { tag => 1 }, [ 'from tag', 'param', 'p' ]],
         },
         "included tag, with config"
     );
@@ -128,7 +128,7 @@ tests acceptance => sub {
         [qw/ &x $y @z $YY/],
         "Excludes"
     );
-    my $exp = sub { $META->get_export(@_)};
+    my $exp = sub { $META->exports_get(@_)};
     is_deeply(
         $spec->exports,
         {
@@ -154,7 +154,10 @@ tests acceptance => sub {
         "Config"
     );
 
-    $spec->export('FakePackage');
+    {
+        local $SIG{__WARN__} = sub {};
+        $spec->export('FakePackage');
+    }
 
     can_ok( 'FakePackage', qw/apple aaa_XX uhg_X_blarg/ );
     no strict 'refs';

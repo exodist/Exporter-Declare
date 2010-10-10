@@ -15,73 +15,73 @@ tests construction => sub {
     is( FakePackage->export_meta, $meta, "Linked" );
     is( $meta->package, 'FakePackage', "Got package" );
     is_deeply(
-        $meta->_exports,
-        { '&FakePackage' => $meta->get_export('FakePackage') },
+        $meta->exports,
+        { '&FakePackage' => $meta->exports_get('FakePackage') },
         "Got export hash"
     );
     is_deeply(
-        $meta->_export_tags,
+        $meta->export_tags,
         { default => [], all => [ '&FakePackage' ], alias => ['FakePackage'] },
         "Got export tags"
     );
-    is_deeply( $meta->_parsers, {}, "Got parser list" );
-    is_deeply( $meta->_options, { suffix => 1, prefix => 1 }, "Got options list" );
+    is_deeply( $meta->options, {}, "Got options list" );
+    is_deeply( $meta->arguments, { suffix => 1, prefix => 1 }, "Got arguments list" );
 };
 
 tests tags => sub {
     my $meta = $CLASS->new('FakeTagPackage');
     is_deeply(
-        $meta->_export_tags,
-        { default => [], all => [ '&FakeTagPackage' ], alias => ['FakeTagPackage'] },
+        $meta->export_tags,
+        { all => [ '&FakeTagPackage' ], alias => ['FakeTagPackage'], default => [] },
         "Export tags"
     );
-    is_deeply( [$meta->get_tag('all')],     [ '&FakeTagPackage' ], ':all only has alias' );
-    is_deeply( [$meta->get_tag('default')], [], ':default is empty list' );
+    is_deeply( [$meta->export_tags_get('all')], [ '&FakeTagPackage' ], ':all only has alias' );
+    is_deeply( [$meta->export_tags_get('default')], [], ':default is empty list' );
 
-    $meta->push_tag( 'a', qw/a b c d/ );
-    is_deeply( [$meta->get_tag('a')], [qw/a b c d/], "Added tag" );
+    $meta->export_tags_push( 'a', qw/a b c d/ );
+    is_deeply( [$meta->export_tags_get('a')], [qw/a b c d/], "Added tag" );
 
-    throws_ok { $meta->push_tag( 'all', "xxx" )}
+    throws_ok { $meta->export_tags_push( 'all', "xxx" )}
         qr/'all' is a reserved tag, you cannot override it./,
         "Cannot modify 'all' tag";
 
-    $meta->push_tag( 'default', qw/a b c d/ );
-    is_deeply( [$meta->get_tag('default')], [qw/a b c d/], "updated default" );
+    $meta->export_tags_push( 'default', qw/a b c d/ );
+    is_deeply( [$meta->export_tags_get('default')], [qw/a b c d/], "updated default" );
 };
 
 tests exports => sub {
     my $meta = $CLASS->new('FakeExportPackage');
 
     my $code_no_sigil = Sub->new(sub {}, exported_by => 'FakeExportPackage' );
-    $meta->add_export( 'code_no_sigil', $code_no_sigil);
+    $meta->exports_add( 'code_no_sigil', $code_no_sigil);
     is_deeply(
-        $meta->_exports->{ '&code_no_sigil' },
+        $meta->exports->{ '&code_no_sigil' },
         $code_no_sigil,
         "Added export without sigil as code"
     );
 
     my $code_with_sigil = Sub->new(sub {}, exported_by => 'FakeExportPackage' );
-    $meta->add_export( '&code_with_sigil', $code_with_sigil);
+    $meta->exports_add( '&code_with_sigil', $code_with_sigil);
     is_deeply(
-        $meta->_exports->{ '&code_with_sigil' },
+        $meta->exports->{ '&code_with_sigil' },
         $code_with_sigil,
         "Added code export"
     );
 
     my $anon = "xxx";
     my $scalar = Variable->new( \$anon, exported_by => 'FakeExportPackage' );
-    $meta->add_export( '$scalar', $scalar );
+    $meta->exports_add( '$scalar', $scalar );
 
     my $hash = Variable->new( {}, exported_by => 'FakeExportPackage' );
-    $meta->add_export( '%hash', $hash );
+    $meta->exports_add( '%hash', $hash );
 
     my $array = Variable->new( [], exported_by => 'FakeExportPackage' );
-    $meta->add_export( '@array', $array );
+    $meta->exports_add( '@array', $array );
 
     is_deeply(
-        $meta->_exports,
+        $meta->exports,
         {
-            '&FakeExportPackage' => $meta->get_export( 'FakeExportPackage' ),
+            '&FakeExportPackage' => $meta->exports_get( 'FakeExportPackage' ),
             '&code_no_sigil'   => $code_no_sigil,
             '&code_with_sigil' => $code_with_sigil,
             '$scalar'          => $scalar,
@@ -91,30 +91,30 @@ tests exports => sub {
         "Added exports"
     );
 
-    throws_ok { $meta->add_export( '@array', $array )}
-        qr/Already exporting '\@array'/,
+    throws_ok { $meta->exports_add( '@array', $array )}
+        qr/'\@array' already added for metric exports/,
         "Can't add an export twice";
 
-    throws_ok { $meta->add_export( '@array2', [] )}
+    throws_ok { $meta->exports_add( '@array2', [] )}
         qr/Exports must be instances of 'Exporter::Declare::Export'/,
         "Can't add an export twice";
 
-    is( $meta->get_export( '$scalar'          ), $scalar,          "Got scalar export" );
-    is( $meta->get_export( '@array'           ), $array,           "Got array export"  );
-    is( $meta->get_export( '%hash'            ), $hash,            "Got hash export"   );
-    is( $meta->get_export( '&code_with_sigil' ), $code_with_sigil, "Got &code export"  );
-    is( $meta->get_export( 'code_no_sigil'    ), $code_no_sigil,   "Got code export"   );
+    is( $meta->exports_get( '$scalar'          ), $scalar,          "Got scalar export" );
+    is( $meta->exports_get( '@array'           ), $array,           "Got array export"  );
+    is( $meta->exports_get( '%hash'            ), $hash,            "Got hash export"   );
+    is( $meta->exports_get( '&code_with_sigil' ), $code_with_sigil, "Got &code export"  );
+    is( $meta->exports_get( 'code_no_sigil'    ), $code_no_sigil,   "Got code export"   );
 
-    throws_ok { $meta->get_export( '@array2' )}
+    throws_ok { $meta->exports_get( '@array2' )}
         qr/FakeExportPackage does not export '\@array2'/,
         "Can't import whats not exported";
 
-    throws_ok { $meta->get_export( '-xxx' )}
-        qr/get_export\(\) does not accept a tag as an argument/,
+    throws_ok { $meta->exports_get( '-xxx' )}
+        qr/exports_get\(\) does not accept a tag as an argument/,
         "Can't import whats not exported";
 
-    throws_ok { $meta->get_export( ':xxx' )}
-        qr/get_export\(\) does not accept a tag as an argument/,
+    throws_ok { $meta->exports_get( ':xxx' )}
+        qr/exports_get\(\) does not accept a tag as an argument/,
         "Can't import whats not exported";
 };
 

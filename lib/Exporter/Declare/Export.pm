@@ -36,8 +36,14 @@ sub exported_by {
 sub inject {
     my $self = shift;
     my ( $class, $name, @args ) = @_;
-    carp "Ignoring arguments importing (" . reftype($self) . ")$name into $class"
-        if @args;
+
+    carp(
+        "Ignoring arguments importing ("
+        . reftype($self)
+        . ")$name into $class: "
+        . join( ', ', @args )
+    ) if (@args);
+
     croak "You must provide a class and name to inject()"
         unless $class && $name;
     no strict 'refs';

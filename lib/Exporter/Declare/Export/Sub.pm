@@ -4,39 +4,6 @@ use warnings;
 
 use base 'Exporter::Declare::Export';
 
-sub inject {
-    my $self = shift;
-    my ($class, $name) = @_;
-
-    $self->SUPER::inject( $class, $name );
-
-    return unless $self->parser;
-
-    my $parser_sub = $self->exported_by->export_meta->get_parser( $self->parser );
-
-    if ( $parser_sub ) {
-        require Devel::Declare;
-        Devel::Declare->setup_for(
-            $class,
-            { $name => { const => $parser_sub } }
-        );
-    }
-    else {
-        require Devel::Declare::Interface;
-        require Exporter::Declare::Parser;
-        Devel::Declare::Interface::enhance(
-            $class,
-            $name,
-            $self->parser,
-        );
-    }
-}
-
-sub parser {
-    my $self = shift;
-    return $self->_data->{parser};
-}
-
 1;
 
 =head1 NAME
@@ -45,29 +12,7 @@ Exporter::Declare::Export::Sub - Export class for subs which are exported.
 
 =head1 DESCRIPTION
 
-Export class for subs which are exported. Overrides inject() in order to hook
-into L<Devel::Declare> on parsed exports.
-
-=head1 OVERRIDEN METHODS
-
-=over 4
-
-=item $export->inject( $class, $name );
-
-Inject the sub, and apply the L<Devel::Declare> magic.
-
-=back
-
-=head1 NEW METHODS
-
-=over 4
-
-=item $parser_name = export->parser()
-
-Get the name of the parse this sub should use with L<Devel::Declare> empty when
-no parse should be used.
-
-=back
+Currently does not do anything L<Exporter::Declare::Export> does not.
 
 =head1 AUTHORS
 

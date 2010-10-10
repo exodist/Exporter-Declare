@@ -1,4 +1,4 @@
-package Exporter::Declare::Parser;
+package Exporter::Declare::Magic::Parser;
 use strict;
 use warnings;
 
@@ -141,7 +141,7 @@ __END__
 
 =head1 NAME
 
-Exporter::Declare::Parser - The parser behind the export() magic.
+Exporter::Declare::Magic::Parser - The parser behind the export() magic.
 
 =head1 AUTHORS
 

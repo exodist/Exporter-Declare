@@ -9,15 +9,15 @@ my $build = Module::Build->new(
     dist_author => 'Chad Granum <exodist7@gmail.com>',
     create_readme => 1,
     requires => {
-        'Devel::Declare::Parser' => 0.017,
-        'Carp' => 0,
-        'Scalar::Util' => 0,
-        'aliased' => 0,
+        'Carp'          => 0,
+        'Scalar::Util'  => 0,
+        'aliased'       => 0,
+        'Meta::Builder' => '0.003',
     },
     build_requires => {
-        'Test::Simple' => 0.88,
-        'Fennec::Lite' => '0.004',
-        'Test::Exception' => 0,
+        'Test::Simple'    => 0.88,
+        'Fennec::Lite'    => '0.004',
+        'Test::Exception' => '0.29',
     },
     meta_merge => {
         resources => {

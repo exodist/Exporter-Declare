@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use Carp qw/croak/;
+our @CARP_NOT = qw/Exporter::Declare/;
 
 sub new {
     my $class = shift;
@@ -45,7 +46,7 @@ sub _process {
 
         if ( $item =~ m/^(!?)[:-](.*)$/ ) {
             my ( $neg, $param ) = ( $1, $2 );
-            if ( $self->package->export_meta->is_argument( $param )) {
+            if ( $self->package->export_meta->arguments_has( $param )) {
                 $self->config->{$param} = shift( @args );
                 $argnum++;
                 next;
@@ -87,7 +88,7 @@ sub _exclude_item {
 
     if ( $item =~ m/^[:-](.*)$/ ) {
         $self->_exclude_item( $_ )
-            for $self->_get_tag( $1 );
+            for $self->_export_tags_get( $1 );
         return;
     }
 
@@ -100,6 +101,9 @@ sub _include_item {
     $conf ||= {};
     $args ||= [];
 
+    use Carp qw/confess/;
+    confess $item if $item =~ m/^&?aaa_/;
+
     push @$args => @{ delete $conf->{'-args'} }
         if defined $conf->{'-args'};
 
@@ -109,8 +113,17 @@ sub _include_item {
     }
 
     if ( $item =~ m/^[:-](.*)$/ ) {
-        $self->_include_item( $_, $conf, $args )
-            for $self->_get_tag( $1 );
+        my $name = $1;
+        return if $self->package->export_meta->options_has( $name );
+        for my $tagitem ( $self->_export_tags_get( $name ) ) {
+            my ( $negate, $name ) = ( $tagitem =~ m/^(!)?(.*)$/ );
+            if ( $negate ) {
+                $self->_exclude_item( $name );
+            }
+            else {
+                $self->_include_item( $tagitem, $conf, $args );
+            }
+        }
         return;
     }
 
@@ -133,13 +146,13 @@ sub _include_item {
 sub _get_item {
     my $self = shift;
     my ( $name ) = @_;
-    $self->package->export_meta->get_export( $name );
+    $self->package->export_meta->exports_get( $name );
 }
 
-sub _get_tag {
+sub _export_tags_get {
     my $self = shift;
     my ( $name ) = @_;
-    $self->package->export_meta->get_tag( $name );
+    $self->package->export_meta->export_tags_get( $name );
 }
 
 1;

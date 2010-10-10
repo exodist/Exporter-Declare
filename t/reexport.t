@@ -39,17 +39,17 @@ use Fennec::Lite;
 
 tests meta_data => sub {
     is_deeply(
-        [ sort keys %{ Combination->export_meta->_exports }],
+        [ sort keys %{ Combination->export_meta->exports }],
         [ sort qw/ &a &b &c &d &e &f $Y $X &Combination/],
         "All exports"
     );
     is_deeply(
-        [ sort @{ Combination->export_meta->_export_tags->{ all }}],
+        [ sort @{ Combination->export_meta->export_tags->{ all }}],
         [ sort qw/ &a &b &c &d &e &f $Y $X &Combination/],
         "All exports tag"
     );
     is_deeply(
-        [ sort @{ Combination->export_meta->_export_tags->{ default }}],
+        [ sort @{ Combination->export_meta->export_tags->{ default }}],
         [ sort qw/ a d e f $Y / ],
         "Defaults"
     );

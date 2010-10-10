@@ -7,26 +7,130 @@ use Carp qw/croak/;
 use aliased 'Exporter::Declare::Export::Sub';
 use aliased 'Exporter::Declare::Export::Variable';
 use aliased 'Exporter::Declare::Export::Alias';
+use Meta::Builder;
+
+accessor 'export_meta';
+
+hash_metric exports => (
+    add => sub {
+        my $self = shift;
+        my ( $data, $metric, $action, $item, $ref ) = @_;
+        croak "Exports must be instances of 'Exporter::Declare::Export'"
+            unless blessed( $ref ) && $ref->isa('Exporter::Declare::Export');
+
+        my ( $type, $name ) = ( $item =~ m/^([\&\%\@\$])?(.*)$/ );
+        $type ||= '&';
+        my $fullname = "$type$name";
+
+        $self->default_hash_add( $data, $metric, $action, $fullname, $ref );
+
+        push @{ $self->export_tags->{all} } => $fullname;
+    },
+    get => sub {
+        my $self = shift;
+        my ( $data, $metric, $action, $item ) = @_;
+
+        croak "exports_get() does not accept a tag as an argument"
+            if $item =~ m/^[:-]/;
+
+        my ( $type, $name ) = ( $item =~ m/^([\&\%\@\$])?(.*)$/ );
+        $type ||= '&';
+        my $fullname = "$type$name";
+
+        return $self->default_hash_get( $data, $metric, $action, $fullname )
+            || croak $self->package . " does not export '$fullname'"
+    },
+    merge => sub {
+        my $self = shift;
+        my ( $data, $metric, $action, $merge ) = @_;
+        my $newmerge = {};
+
+        for my $item ( keys %$merge ) {
+            my $value = $merge->{ $item };
+            next if $value->isa(Alias);
+            $newmerge->{$item} = $value;
+        }
+
+        $self->default_hash_merge( $data, $metric, $action, $newmerge );
+    }
+);
+
+hash_metric options => (
+    add => sub {
+        my $self = shift;
+        my ( $data, $metric, $action, $item ) = @_;
+
+        croak "'$item' is already a tag, you can't also make it an option."
+            if $self->export_tags_has( $item );
+        croak "'$item' is already an argument, you can't also make it an option."
+            if $self->arguments_has( $item );
+
+        $self->default_hash_add( $data, $metric, $action, $item, 1 );
+    },
+);
+
+hash_metric arguments => (
+    add => sub {
+        my $self = shift;
+        my ( $data, $metric, $action, $item ) = @_;
+
+        croak "'$item' is already a tag, you can't also make it an argument."
+            if $self->export_tags_has( $item );
+        croak "'$item' is already an option, you can't also make it an argument."
+            if $self->options_has( $item );
+
+        $self->default_hash_add( $data, $metric, $action, $item, 1 );
+    },
+    merge => sub {
+        my $self = shift;
+        my ( $data, $metric, $action, $merge ) = @_;
+        my $newmerge = { %$merge };
+        delete $newmerge->{suffix};
+        delete $newmerge->{prefix};
+        $self->default_hash_merge( $data, $metric, $action, $newmerge );
+    }
+);
+
+lists_metric export_tags => (
+     push => sub {
+        my $self = shift;
+        my ( $data, $metric, $action, $item, @args ) = @_;
+
+        croak "'$item' is a reserved tag, you cannot override it."
+            if $item eq 'all';
+        croak "'$item' is already an option, you can't also make it a tag."
+            if $self->options_has( $item );
+        croak "'$item' is already an argument, you can't also make it a tag."
+            if $self->arguments_has( $item );
+
+        $self->default_list_push( $data, $metric, $action, $item, @args );
+    },
+    merge => sub {
+        my $self = shift;
+        my ( $data, $metric, $action, $merge ) = @_;
+        my $newmerge = {};
+        my %aliases = ( map {
+            my ( $name ) = ( m/^&?(.*)$/);
+            ( $name => 1, "&$name" => 1 )
+        } @{ $merge->{alias} });
+
+        for my $item ( keys %$merge ) {
+            my $values = $merge->{ $item };
+            $newmerge->{$item} = [ grep { !$aliases{$_} } @$values ];
+        }
+
+        $self->default_list_merge( $data, $metric, $action, $newmerge );
+    }
+);
 
 sub new {
     my $class = shift;
-    my ( $package, %options ) = @_;
-
-    my $self = bless([
-        $package,
-        {}, #exports
-        { default => [], all => [] }, #tags
-        {}, #parsers
-        { prefix => 1, suffix => 1 }, #options
-    ], $class);
-
-    {
-        no strict 'refs';
-        *{$self->package . '::export_meta'} = sub { $self };
-    }
-
-    $self->add_alias unless $options{noalias};
-
+    my $self = $class->SUPER::new(
+        @_,
+        export_tags => { all => [], default => [], alias => [] },
+        arguments => { prefix => 1, suffix => 1 },
+    );
+    $self->add_alias;
     return $self;
 }
 
@@ -38,7 +142,7 @@ sub new_from_exporter {
     my ($exports) = $self->get_ref_from_package('@EXPORT');
     my ($export_oks) = $self->get_ref_from_package('@EXPORT_OK');
     my ($tags) = $self->get_ref_from_package('%EXPORT_TAGS');
-    $self->add_export( @$_ ) for map {
+    $self->exports_add( @$_ ) for map {
         my ( $ref, $name ) = $self->get_ref_from_package( $_ );
         if ( $name =~ m/^\&/ ) {
             Sub->new( $ref, exported_by => $exporter );
@@ -48,120 +152,23 @@ sub new_from_exporter {
         }
         [ $name, $ref ];
     } grep { !$seen{$_}++ } @$exports, @$export_oks;
-    $self->push_tag( 'default', @$exports );
-    $self->push_tag( $_, $tags->{$_} ) for keys %$tags;
+    $self->export_tags_push( 'default', @$exports );
+    $self->export_tags_push( $_, $tags->{$_} ) for keys %$tags;
     return $self;
 }
-
-sub package      { shift->[0] }
-sub _exports     { shift->[1] }
-sub _export_tags { shift->[2] }
-sub _parsers     { shift->[3] }
-sub _options     { shift->[4] }
 
 sub add_alias {
     my $self = shift;
     my $package = $self->package;
     my ( $alias ) = ( $package =~ m/([^:]+)$/ );
-    $self->add_export( $alias, Alias->new( sub { $package }, exported_by => $package ));
-    $self->push_tag( 'alias', $alias );
-}
-
-sub add_export {
-    my $self = shift;
-    my ( $item, $ref ) = @_;
-    my ( $type, $name ) = ( $item =~ m/^([\&\%\@\$])?(.*)$/ );
-    $type ||= '&';
-    my $fullname = "$type$name";
-
-    croak "Exports must be instances of 'Exporter::Declare::Export'"
-        unless blessed( $ref ) && $ref->isa('Exporter::Declare::Export');
-
-    croak "Already exporting '$fullname'"
-        if $self->_exports->{$fullname};
-
-    $self->_exports->{$fullname} = $ref;
-    push @{ $self->_export_tags->{all}} => $fullname;
-}
-
-sub get_export {
-    my $self = shift;
-    my ( $item ) = @_;
-
-    croak "get_export() does not accept a tag as an argument"
-        if $item =~ m/^[:-]/;
-
-    my ( $type, $name ) = ( $item =~ m/^([\&\%\@\$])?(.*)$/ );
-    $type ||= '&';
-    my $fullname = "$type$name";
-
-    return $self->_exports->{$fullname}
-        || croak $self->package . " does not export '$fullname'"
-}
-
-sub push_tag {
-    my $self = shift;
-    my ( $name, @list ) = @_;
-    croak "'$name' is a reserved tag, you cannot override it."
-        if $name eq 'all';
-    croak "'$name' is already an option, you can't also make it a tag."
-        if $self->is_option($name);
-    push @{$self->_export_tags->{$name}} => @list;
+    $self->exports_add( $alias, Alias->new( sub { $package }, exported_by => $package ));
+    $self->export_tags_push( 'alias', $alias );
 }
 
 sub is_tag {
     my $self = shift;
     my ( $name ) = @_;
-    $self->_export_tags->{$name} ? 1 : 0;
-}
-
-sub get_tag {
-    my $self = shift;
-    my ( $name ) = @_;
-    @{ $self->_export_tags->{$name} || []}
-}
-
-sub add_options {
-    my $self = shift;
-    for my $name ( @_ ) {
-        croak "'$name' is already an export tag and can't be used as an option."
-            if $self->is_tag($name);
-        $self->_options->{$name} = 0;
-    }
-}
-
-sub add_arguments {
-    my $self = shift;
-    for my $name ( @_ ) {
-        croak "'$name' is already an export tag and can't be used as an option."
-            if $self->is_tag($name);
-        $self->_options->{$name} = 1;
-    }
-}
-
-sub is_option {
-    my $self = shift;
-    my ( $option ) = @_;
-    return defined $self->_options->{$option}
-               && !$self->_options->{$option};
-}
-
-sub is_argument {
-    my $self = shift;
-    my ( $option ) = @_;
-    return $self->_options->{$option};
-}
-
-sub add_parser {
-    my $self = shift;
-    my ( $name, $code ) = @_;
-    $self->_parsers->{ $name } = $code;
-}
-
-sub get_parser {
-    my $self = shift;
-    my ( $name ) = @_;
-    return $self->_parsers->{ $name };
+    return exists $self->export_tags->{$name} ? 1 : 0;
 }
 
 sub get_ref_from_package {
@@ -189,19 +196,6 @@ sub reexport {
         ? $exporter->export_meta()
         : __PACKAGE__->new_from_exporter( $exporter );
     $self->merge( $meta );
-}
-
-sub merge {
-    my $self = shift;
-    my ( $meta ) = @_;
-    $self->add_export( $_, $meta->_exports->{ $_ })
-        for grep { !$meta->_exports->{$_}->isa(Alias) } keys %{ $meta->_exports };
-
-    $self->push_tag( $_, @{ $meta->_export_tags->{ $_ }} )
-        for grep { $_ !~ m/^(all|alias)$/ } keys %{ $meta->_export_tags };
-
-    $self->add_parser( $_, $meta->get_parser( $_ ))
-        for keys %{ $meta->_parsers };
 }
 
 1;
@@ -251,7 +245,7 @@ L<Exporter::Declare::Export> subclass.
 Retrieve the L<Exporter::Declare::Export> object by name. Name should be the
 item name with sigil, assumed to be sub when sigil is missing.
 
-=item $meta->push_tag( $name, @items )
+=item $meta->export_tags_push( $name, @items )
 
 Add @items to the specified tag. Tag will be created if it does not already
 exist. $name should be the tag name B<WITHOUT> -/: prefix.
