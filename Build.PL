@@ -9,6 +9,7 @@ my $build = Module::Build->new(
     dist_author => 'Chad Granum <exodist7@gmail.com>',
     create_readme => 1,
     requires => {
+        'perl'          => '5.8.0',
         'Carp'          => 0,
         'Scalar::Util'  => 0,
         'aliased'       => 0,

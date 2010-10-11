@@ -205,41 +205,37 @@ sub reexport {
 
 =head1 NAME
 
-Exporter::Declare - Declarative exporting, better import interface.
+Exporter::Declare - Exporting done right
 
 =head1 DESCRIPTION
 
-Exporter::Declare is a declarative exporting tool that uses a meta data object
-to track exports on a per-object basis. It also provides tools to create a
-parameterized input() method so that you are not forced to wrap a black-box
-import() method.
+Exporter::Declare is a meta-driven exporting tool. Exporter::Declare tries to
+adopt all the good features of other exporting tools, while throwing away
+horrible interfaces. Exporter::Declare also provides hooks that allow you to add
+options and arguments for import. Finally, Exporter::Declare's meta-driven
+system allows for top-notch introspection.
 
-Exporting tools can be frustrating, L<Exporter> is showing its age.
-L<Sub::Exporter> is a bit complicated for the module doing the exporting. Above
-all else most export modules install their own import() function that can be a
-pain to wrap or override without screwing something up.
-
-Exporter declare solves these problems and more by providing the following:
+=head1 FEATURES
 
 =over 4
 
-=item Declarative Exporting (Like L<Moose> for Exporting)
+=item Declarative exporting (like L<Moose> for exporting)
 
-=item Meta Class Instead of Package Variables
+=item Meta-driven for introspection
 
-=item Hooks Into import()
+=item Customizable import() method
 
-=item Support For Export Groups (tags)
+=item Export groups (tags)
 
-=item Export Generators (Subs And Variables)
+=item Export generators for subs and variables
 
-=item Clear And Concise OO API
+=item Clear and concise OO API
 
-=item All Exports Are Blessed
+=item Exports are blessed, allowing for more introspection
 
-=item Extended Import Syntax Based On L<Sub::Exporter>
+=item Import syntax based off of L<Sub::Exporter>
 
-=item The '-alias' Tag Can Be Used On Any Exporter To Generate An Alias
+=item Packages export aliases
 
 =back
 
