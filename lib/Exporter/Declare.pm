@@ -12,7 +12,7 @@ use aliased 'Exporter::Declare::Export::Generator';
 
 BEGIN { Meta->new( __PACKAGE__ )}
 
-our $VERSION = '0.102';
+our $VERSION = '0.103';
 our @CARP_NOT = qw/
     Exporter::Declare
     Exporter::Declare::Specs
