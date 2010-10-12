@@ -1,29 +1,24 @@
 NAME
-    Exporter::Declare - Declarative exporting, better import interface.
+    Exporter::Declare - Exporting done right
 
 DESCRIPTION
-    Exporter::Declare is a declarative exporting tool that uses a meta data
-    object to track exports on a per-object basis. It also provides tools to
-    create a parameterized input() method so that you are not forced to wrap
-    a black-box import() method.
+    Exporter::Declare is a meta-driven exporting tool. Exporter::Declare
+    tries to adopt all the good features of other exporting tools, while
+    throwing away horrible interfaces. Exporter::Declare also provides hooks
+    that allow you to add options and arguments for import. Finally,
+    Exporter::Declare's meta-driven system allows for top-notch
+    introspection.
 
-    Exporting tools can be frustrating, Exporter is showing its age.
-    Sub::Exporter is a bit complicated for the module doing the exporting.
-    Above all else most export modules install their own import() function
-    that can be a pain to wrap or override without screwing something up.
-
-    Exporter declare solves these problems and more by providing the
-    following:
-
-    Declarative Exporting (Like Moose for Exporting)
-    Meta Class Instead of Package Variables
-    Hooks Into import()
-    Support For Export Groups (tags)
-    Export Generators (Subs And Variables)
-    Clear And Concise OO API
-    All Exports Are Blessed
-    Extended Import Syntax Based On Sub::Exporter
-    The '-alias' Tag Can Be Used On Any Exporter To Generate An Alias
+FEATURES
+    Declarative exporting (like Moose for exporting)
+    Meta-driven for introspection
+    Customizable import() method
+    Export groups (tags)
+    Export generators for subs and variables
+    Clear and concise OO API
+    Exports are blessed, allowing for more introspection
+    Import syntax based off of Sub::Exporter
+    Packages export aliases
 
 SYNOPSIS
   EXPORTER
