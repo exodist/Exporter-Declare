@@ -48,6 +48,8 @@ export_tag( magic => qw/
 sub import {
     my $class = shift;
     my $caller = caller;
+    $class->before_import( $caller, \@_ )
+        if $class->can( 'before_import' );
     my $specs = export_to( $class, $caller, @_ );
     $class->after_import( $caller, $specs )
         if $class->can( 'after_import' );
@@ -276,6 +278,13 @@ system allows for top-notch introspection.
 
     # No need to fiddle with import() or do any wrapping.
     # No need to parse the arguments yourself!
+
+    sub before_import {
+       my ($class, $args) = @_;
+
+       # fiddle with args before importing routines are called
+       @$args = grep { !/^skip_/ } @$args
+    }
 
     sub after_import {
         my $class = shift;
