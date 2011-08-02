@@ -12,7 +12,7 @@ use aliased 'Exporter::Declare::Export::Generator';
 
 BEGIN { Meta->new( __PACKAGE__ )}
 
-our $VERSION = '0.103';
+our $VERSION = '0.104';
 our @CARP_NOT = qw/
     Exporter::Declare
     Exporter::Declare::Specs
@@ -251,10 +251,15 @@ system allows for top-notch introspection.
     default_exports qw/ do_the_thing /;
     exports qw/ subA subB $SCALAR @ARRAY %HASH /;
 
+    # Create a couple tags (import lists)
     export_tag subs => qw/ subA subB do_the_thing /;
     export_tag vars => qw/ $SCALAR @ARRAY %HASH /;
 
+    # These are simple boolean options, pass '-optionA' to enable it.
     import_options   qw/ optionA optionB /;
+
+    # These are options which slurp in the next argument as their value, pass
+    # '-optionC' => 'foo' to give it a value.
     import_arguments qw/ optionC optionD /;
 
     export anon_export => sub { ... };
@@ -276,9 +281,8 @@ system allows for top-notch introspection.
         return \$letter;
     };
 
-    # No need to fiddle with import() or do any wrapping.
-    # No need to parse the arguments yourself!
-
+    # You can create a function to mangle the arguments before they are
+    # modified by import()
     sub before_import {
        my ($class, $args) = @_;
 
@@ -286,6 +290,9 @@ system allows for top-notch introspection.
        @$args = grep { !/^skip_/ } @$args
     }
 
+    # There is no need to fiddle with import() or do any wrapping.
+    # the $specs data structure means you generally do not need to parse
+    # arguments yourself (but you can if you want using before_import())
     sub after_import {
         my $class = shift;
         my ( $importer, $specs ) = @_;
