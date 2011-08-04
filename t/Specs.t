@@ -166,5 +166,17 @@ tests acceptance => sub {
     isa_ok( \@{"FakePackage\::$_"}, Variable ) for qw/aaa_ZZ aaa_zz uhg_Z_blarg/;
 };
 
+tests inject_api => sub {
+    my $spec = $CLASS->new( TestPackage );
+    ok( !$spec->exports->{'&foo'}, "no foo export" );
+    $spec->add_export( '&foo' => sub { 'foo' });
+    ok( $spec->exports->{'&foo'}, "foo export" );
+    isa_ok( $spec->exports->{'&foo'}->[0], 'Exporter::Declare::Export::Sub' );
+    my $test_dest = 'Test::ExDec::Inject::API';
+    $spec->export( $test_dest );
+    can_ok( $test_dest, 'foo' );
+    is( $test_dest->can( 'foo' ), $spec->exports->{'&foo'}->[0], "sanity check" );
+};
+
 run_tests;
 done_testing;

@@ -35,6 +35,18 @@ sub export {
     }
 }
 
+sub add_export {
+    my $self = shift;
+    my ( $name, $value, $config ) = @_;
+    my $type = ref $value eq 'CODE' ? 'Sub' : 'Variable';
+    "Exporter::Declare::Export::$type"->new( $value, exported_by => scalar caller() );
+    $self->exports->{$name} = [
+        $value,
+        $config || {},
+        [],
+    ];
+}
+
 sub _process {
     my $self = shift;
     my ( $tag, @args ) = @_;
@@ -203,6 +215,15 @@ Get the arrayref containing the names of all excluded exports.
 =item $specs->export( $package )
 
 Do the actual exporting. All exports will be injected into $package.
+
+=item $specs->add_export( $name, $value )
+
+=item $specs->add_export( $name, $value, \%config )
+
+Add an export. Name is required, including sigil. Value is required, if it is a
+sub it will be blessed as a ::Sub, otherwise blessed as a ::Variable.
+
+    $specs->add_export( '&foo' => sub { return 'foo' });
 
 =back
 
