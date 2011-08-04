@@ -48,9 +48,17 @@ export_tag( magic => qw/
 sub import {
     my $class = shift;
     my $caller = caller;
-    $class->before_import( $caller, \@_ )
+
+    $class->alter_import_args( $caller, \@_ )
+        if $class->can( 'alter_import_args' );
+
+    my $specs = _parse_specs( $class, @_ );
+
+    $class->before_import( $caller, $specs )
         if $class->can( 'before_import' );
-    my $specs = export_to( $class, $caller, @_ );
+
+    $specs->export( $caller );
+
     $class->after_import( $caller, $specs )
         if $class->can( 'after_import' );
 }
@@ -67,16 +75,22 @@ sub after_import {
     export_to( 'Exporter::Declare::Magic', $caller, @$args );
 }
 
-sub export_to {
+sub _parse_specs {
     my $class = _find_export_class( \@_ );
-    my ( $dest, @args ) = @_;
+    my ( @args ) = @_;
 
     # XXX This is ugly!
     unshift @args => '-default'
         if $class eq __PACKAGE__
         && grep { $_ eq '-magic' } @args;
 
-    my $specs = Specs->new( $class, @args );
+    return Specs->new( $class, @args );
+}
+
+sub export_to {
+    my $class = _find_export_class( \@_ );
+    my ( $dest, @args ) = @_;
+    my $specs = _parse_specs( $class, @args );
     $specs->export( $dest );
     return $specs;
 }
