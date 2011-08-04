@@ -12,7 +12,7 @@ use aliased 'Exporter::Declare::Export::Generator';
 
 BEGIN { Meta->new( __PACKAGE__ )}
 
-our $VERSION = '0.104';
+our $VERSION = '0.105';
 our @CARP_NOT = qw/
     Exporter::Declare
     Exporter::Declare::Specs
@@ -296,8 +296,8 @@ system allows for top-notch introspection.
     };
 
     # You can create a function to mangle the arguments before they are
-    # modified by import()
-    sub before_import {
+    # parsed into a Exporter::Declare::Spec object.
+    sub alter_import_args {
        my ($class, $args) = @_;
 
        # fiddle with args before importing routines are called
@@ -306,7 +306,19 @@ system allows for top-notch introspection.
 
     # There is no need to fiddle with import() or do any wrapping.
     # the $specs data structure means you generally do not need to parse
-    # arguments yourself (but you can if you want using before_import())
+    # arguments yourself (but you can if you want using alter_import_args())
+
+    # Change the spec object before export occurs
+    sub before_import {
+        my $class = shift;
+        my ( $importer, $specs ) = @_;
+
+        if ($specs->config->{optionA}) {
+            # Modify $spec attributes accordingly
+        }
+    }
+
+    # Use spec object after export occurs
     sub after_import {
         my $class = shift;
         my ( $importer, $specs ) = @_;
