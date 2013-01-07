@@ -47,6 +47,47 @@ sub add_export {
     ];
 }
 
+sub arguments {
+    my $self = shift;
+    my $meta = $self->package->export_meta;
+    return grep { $meta->is_argument($_) } keys %{$self->config};
+}
+
+sub options {
+    my $self = shift;
+    my $meta = $self->package->export_meta;
+    return grep { $meta->is_option($_) } keys %{$self->config};
+}
+
+sub tags {
+    my $self = shift;
+    my $meta = $self->package->export_meta;
+    return grep { $meta->is_tag($_) } keys %{$self->config};
+}
+
+sub _make_info {
+    my $self = shift;
+    my $config = $self->config;
+    return { map { $_, $config->{$_} } @_ };
+}
+
+sub argument_info {
+    my $self = shift;
+    return $self->_make_info($self->arguments);
+}
+
+sub option_info {
+    my $self = shift;
+    return $self->_make_info($self->options);
+}
+
+sub tag_info {
+    my $self = shift;
+    my $all_tags = $self->package->export_meta->export_tags;
+    return { map { $_, $all_tags->{$_} } $self->tags };
+}
+
+
 sub _process {
     my $self = shift;
     my ( $tag, @args ) = @_;
@@ -201,6 +242,30 @@ Get the configuration hash, All specified options and tags are the keys. The
 value will be true/false/undef for tags/boolean options. For options that take
 arguments the value will be that argument. When a config hash is provided to a
 tag it will be the value.
+
+=item @names = $specs->arguments()
+
+=item @names = $specs->options()
+
+=item @names = $specs->tags()
+
+Get the argument, option, or tag names that were specified for the import.
+
+=item $hashref = $specs->argument_info()
+
+Get the arguments that were specified for the import. The key is the name of the
+argument and the value is what the user supplied during import.
+
+=item $hashref = $specs->option_info()
+
+Get the options that were specified for the import. The key is the name of the user 
+supplied option and the value will evaluate to true.
+
+=item $hashref = $specs->tag_info()
+
+Get the values associated with the tags used during import. The key is the name of the tag
+and the value is an array ref containing the values given to export_tag() for the associated
+name.
 
 =item $hashref = $specs->exports()
 
