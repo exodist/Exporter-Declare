@@ -10,65 +10,71 @@ use aliased 'Exporter::Declare::Export::Sub';
 use aliased 'Exporter::Declare::Export::Variable';
 use aliased 'Exporter::Declare::Export::Generator';
 
-BEGIN { Meta->new( __PACKAGE__ )}
+BEGIN { Meta->new(__PACKAGE__) }
 
-our $VERSION = '0.105';
+our $VERSION  = '0.106';
 our @CARP_NOT = qw/
     Exporter::Declare
     Exporter::Declare::Specs
     Exporter::Declare::Meta
     Exporter::Declare::Magic
-/;
+    /;
 
-default_exports( qw/
-    import
-    exports
-    default_exports
-    import_options
-    import_arguments
-    export_tag
-    export
-    gen_export
-    default_export
-    gen_default_export
-/);
+default_exports(
+    qw/
+        import
+        exports
+        default_exports
+        import_options
+        import_arguments
+        export_tag
+        export
+        gen_export
+        default_export
+        gen_default_export
+        /
+);
 
-exports( qw/
-    reexport
-    export_to
-/);
+exports(
+    qw/
+        reexport
+        export_to
+        /
+);
 
-export_tag( magic => qw/
-    !export
-    !gen_export
-    !default_export
-    !gen_default_export
-/);
+export_tag(
+    magic => qw/
+        !export
+        !gen_export
+        !default_export
+        !gen_default_export
+        /
+);
 
 sub import {
-    my $class = shift;
+    my $class  = shift;
     my $caller = caller;
 
     $class->alter_import_args( $caller, \@_ )
-        if $class->can( 'alter_import_args' );
+        if $class->can('alter_import_args');
 
     my $specs = _parse_specs( $class, @_ );
 
     $class->before_import( $caller, $specs )
-        if $class->can( 'before_import' );
+        if $class->can('before_import');
 
-    $specs->export( $caller );
+    $specs->export($caller);
 
     $class->after_import( $caller, $specs )
-        if $class->can( 'after_import' );
+        if $class->can('after_import');
 }
 
 sub after_import {
     my $class = shift;
     my ( $caller, $specs ) = @_;
-    Meta->new( $caller );
+    Meta->new($caller);
 
-    return unless my $args = $specs->config->{ 'magic' };
+    return unless my $args = $specs->config->{'magic'};
     $args = ['-default'] unless ref $args && ref $args eq 'ARRAY';
 
     require Exporter::Declare::Magic;
@@ -77,7 +83,7 @@ sub after_import {
 
 sub _parse_specs {
     my $class = _find_export_class( \@_ );
-    my ( @args ) = @_;
+    my (@args) = @_;
 
     # XXX This is ugly!
     unshift @args => '-default'
@@ -91,7 +97,7 @@ sub export_to {
     my $class = _find_export_class( \@_ );
     my ( $dest, @args ) = @_;
     my $specs = _parse_specs( $class, @args );
-    $specs->export( $dest );
+    $specs->export($dest);
     return $specs;
 }
 
@@ -103,16 +109,15 @@ sub export_tag {
 
 sub exports {
     my $class = _find_export_class( \@_ );
-    my $meta = $class->export_meta;
+    my $meta  = $class->export_meta;
     _export( $class, undef, $_ ) for @_;
     $meta->export_tags_get('all');
 }
 
 sub default_exports {
     my $class = _find_export_class( \@_ );
-    my $meta = $class->export_meta;
-    $meta->export_tags_push( 'default', _export( $class, undef, $_ ))
-        for @_;
+    my $meta  = $class->export_meta;
+    $meta->export_tags_push( 'default', _export( $class, undef, $_ ) ) for @_;
     $meta->export_tags_get('default');
 }
 
@@ -128,70 +133,73 @@ sub gen_export {
 
 sub default_export {
     my $class = _find_export_class( \@_ );
-    my $meta = $class->export_meta;
-    $meta->export_tags_push( 'default', _export( $class, undef, @_ ));
+    my $meta  = $class->export_meta;
+    $meta->export_tags_push( 'default', _export( $class, undef, @_ ) );
 }
 
 sub gen_default_export {
     my $class = _find_export_class( \@_ );
-    my $meta = $class->export_meta;
-    $meta->export_tags_push( 'default', _export( $class, Generator(), @_ ));
+    my $meta  = $class->export_meta;
+    $meta->export_tags_push( 'default', _export( $class, Generator(), @_ ) );
 }
 
 sub import_options {
     my $class = _find_export_class( \@_ );
-    my $meta = $class->export_meta;
+    my $meta  = $class->export_meta;
     $meta->options_add($_) for @_;
 }
 
 sub import_arguments {
     my $class = _find_export_class( \@_ );
-    my $meta = $class->export_meta;
+    my $meta  = $class->export_meta;
     $meta->arguments_add($_) for @_;
 }
 
 sub _parse_export_params {
     my ( $class, $expclass, $name, @param ) = @_;
-    my $ref = ref($param[-1]) ? pop(@param) : undef;
+    my $ref = ref( $param[-1] ) ? pop(@param) : undef;
     my $meta = $class->export_meta;
 
-    ( $ref, $name ) = $meta->get_ref_from_package( $name )
+    ( $ref, $name ) = $meta->get_ref_from_package($name)
         unless $ref;
 
-    ( my $type, $name ) = ($name =~ m/^([\$\@\&\%]?)(.*)$/);
+    ( my $type, $name ) = ( $name =~ m/^([\$\@\&\%]?)(.*)$/ );
     $type = "" if $type eq '&';
 
     my $fullname = "$type$name";
 
     return (
-        class => $class,
+        class        => $class,
         export_class => $expclass || undef,
-        name => $name,
-        ref => $ref,
-        type => $type || "",
-        fullname => $fullname,
-        args => \@param,
+        name         => $name,
+        ref          => $ref,
+        type         => $type || "",
+        fullname     => $fullname,
+        args         => \@param,
     );
 }
 
 sub _export {
-    _add_export( _parse_export_params( @_ ));
+    _add_export( _parse_export_params(@_) );
 }
 
 sub _add_export {
     my %params = @_;
-    my $meta = $params{class}->export_meta;
-    $params{ export_class } ||= reftype( $params{ref} ) eq 'CODE'
+    my $meta   = $params{class}->export_meta;
+    $params{export_class} ||=
+          reftype( $params{ref} ) eq 'CODE'
         ? Sub()
         : Variable();
 
-    $params{ export_class }->new(
-        $params{ ref },
-        exported_by => $params{ class },
-        ($params{ type } ? ( type   => 'variable' )
-                         : ( type   => 'sub'      )),
-        ($params{ extra_exporter_props }
-            ? %{ $params{ extra_exporter_props }}
+    $params{export_class}->new(
+        $params{ref},
+        exported_by => $params{class},
+        (
+            $params{type} ? ( type => 'variable' )
+            : ( type => 'sub' )
+        ),
+        (
+            $params{extra_exporter_props} ? %{$params{extra_exporter_props}}
             : ()
         ),
     );
@@ -204,7 +212,7 @@ sub _add_export {
 sub _find_export_class {
     my $args = shift;
 
-    return shift( @$args )
+    return shift(@$args)
         if @$args
         && eval { $args->[0]->can('export_meta') };
 
@@ -214,7 +222,7 @@ sub _find_export_class {
 sub reexport {
     my $from = pop;
     my $class = shift || caller;
-    $class->export_meta->reexport( $from );
+    $class->export_meta->reexport($from);
 }
 
 1;
