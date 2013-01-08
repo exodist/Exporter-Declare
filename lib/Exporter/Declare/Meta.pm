@@ -172,6 +172,18 @@ sub is_tag {
     return exists $self->export_tags->{$name} ? 1 : 0;
 }
 
+sub is_argument {
+    my $self = shift;
+    my ( $name ) = @_;
+    return exists $self->arguments->{$name} ? 1 : 0;
+}
+
+sub is_option {
+    my $self = shift;
+    my ( $name ) = @_;
+    return exists $self->options->{$name} ? 1 : 0;
+}
+
 sub get_ref_from_package {
     my $self = shift;
     my ( $item ) = @_;
