@@ -16,7 +16,7 @@ hash_metric exports => (
         my $self = shift;
         my ( $data, $metric, $action, $item, $ref ) = @_;
         croak "Exports must be instances of 'Exporter::Declare::Export'"
-            unless blessed( $ref ) && $ref->isa('Exporter::Declare::Export');
+            unless blessed($ref) && $ref->isa('Exporter::Declare::Export');
 
         my ( $type, $name ) = ( $item =~ m/^([\&\%\@\$])?(.*)$/ );
         $type ||= '&';
@@ -24,7 +24,7 @@ hash_metric exports => (
 
         $self->default_hash_add( $data, $metric, $action, $fullname, $ref );
 
-        push @{ $self->export_tags->{all} } => $fullname;
+        push @{$self->export_tags->{all}} => $fullname;
     },
     get => sub {
         my $self = shift;
@@ -38,7 +38,7 @@ hash_metric exports => (
         my $fullname = "$type$name";
 
         return $self->default_hash_get( $data, $metric, $action, $fullname )
-            || croak $self->package . " does not export '$fullname'"
+            || croak $self->package . " does not export '$fullname'";
     },
     merge => sub {
         my $self = shift;
@@ -46,7 +46,7 @@ hash_metric exports => (
         my $newmerge = {};
 
         for my $item ( keys %$merge ) {
-            my $value = $merge->{ $item };
+            my $value = $merge->{$item};
             next if $value->isa(Alias);
             $newmerge->{$item} = $value;
         }
@@ -61,9 +61,9 @@ hash_metric options => (
         my ( $data, $metric, $action, $item ) = @_;
 
         croak "'$item' is already a tag, you can't also make it an option."
-            if $self->export_tags_has( $item );
+            if $self->export_tags_has($item);
         croak "'$item' is already an argument, you can't also make it an option."
-            if $self->arguments_has( $item );
+            if $self->arguments_has($item);
 
         $self->default_hash_add( $data, $metric, $action, $item, 1 );
     },
@@ -75,16 +75,16 @@ hash_metric arguments => (
         my ( $data, $metric, $action, $item ) = @_;
 
         croak "'$item' is already a tag, you can't also make it an argument."
-            if $self->export_tags_has( $item );
+            if $self->export_tags_has($item);
         croak "'$item' is already an option, you can't also make it an argument."
-            if $self->options_has( $item );
+            if $self->options_has($item);
 
         $self->default_hash_add( $data, $metric, $action, $item, 1 );
     },
     merge => sub {
         my $self = shift;
         my ( $data, $metric, $action, $merge ) = @_;
-        my $newmerge = { %$merge };
+        my $newmerge = {%$merge};
         delete $newmerge->{suffix};
         delete $newmerge->{prefix};
         $self->default_hash_merge( $data, $metric, $action, $newmerge );
@@ -92,16 +92,16 @@ hash_metric arguments => (
 );
 
 lists_metric export_tags => (
-     push => sub {
+    push => sub {
         my $self = shift;
         my ( $data, $metric, $action, $item, @args ) = @_;
 
         croak "'$item' is a reserved tag, you cannot override it."
             if $item eq 'all';
         croak "'$item' is already an option, you can't also make it a tag."
-            if $self->options_has( $item );
+            if $self->options_has($item);
         croak "'$item' is already an argument, you can't also make it a tag."
-            if $self->arguments_has( $item );
+            if $self->arguments_has($item);
 
         $self->default_list_push( $data, $metric, $action, $item, @args );
     },
@@ -109,14 +109,16 @@ lists_metric export_tags => (
         my $self = shift;
         my ( $data, $metric, $action, $merge ) = @_;
         my $newmerge = {};
-        my %aliases = ( map {
-            my ( $name ) = ( m/^&?(.*)$/);
-            ( $name => 1, "&$name" => 1 )
-        } @{ $merge->{alias} });
+        my %aliases  = (
+            map {
+                my ($name) = (m/^&?(.*)$/);
+                ( $name => 1, "&$name" => 1 )
+            } @{$merge->{alias}}
+        );
 
         for my $item ( keys %$merge ) {
-            my $values = $merge->{ $item };
-            $newmerge->{$item} = [ grep { !$aliases{$_} } @$values ];
+            my $values = $merge->{$item};
+            $newmerge->{$item} = [grep { !$aliases{$_} } @$values];
         }
 
         $self->default_list_merge( $data, $metric, $action, $newmerge );
@@ -125,32 +127,33 @@ lists_metric export_tags => (
 
 sub new {
     my $class = shift;
-    my $self = $class->SUPER::new(
+    my $self  = $class->SUPER::new(
         @_,
-        export_tags => { all => [], default => [], alias => [] },
-        arguments => { prefix => 1, suffix => 1 },
+        export_tags => {all    => [], default => [], alias => []},
+        arguments   => {prefix => 1,  suffix  => 1},
     );
     $self->add_alias;
     return $self;
 }
 
 sub new_from_exporter {
-    my $class = shift;
-    my ( $exporter ) = @_;
-    my $self = $class->new( $exporter );
+    my $class      = shift;
+    my ($exporter) = @_;
+    my $self       = $class->new($exporter);
     my %seen;
-    my ($exports) = $self->get_ref_from_package('@EXPORT');
+    my ($exports)    = $self->get_ref_from_package('@EXPORT');
     my ($export_oks) = $self->get_ref_from_package('@EXPORT_OK');
-    my ($tags) = $self->get_ref_from_package('%EXPORT_TAGS');
-    $self->exports_add( @$_ ) for map {
-        my ( $ref, $name ) = $self->get_ref_from_package( $_ );
+    my ($tags)       = $self->get_ref_from_package('%EXPORT_TAGS');
+    $self->exports_add(@$_) for map {
+        my ( $ref, $name ) = $self->get_ref_from_package($_);
+
         if ( $name =~ m/^\&/ ) {
             Sub->new( $ref, exported_by => $exporter );
         }
         else {
             Variable->new( $ref, exported_by => $exporter );
         }
-        [ $name, $ref ];
+        [$name, $ref];
     } grep { !$seen{$_}++ } @$exports, @$export_oks;
     $self->export_tags_push( 'default', @$exports )
         if @$exports;
@@ -159,56 +162,57 @@ sub new_from_exporter {
 }
 
 sub add_alias {
-    my $self = shift;
+    my $self    = shift;
     my $package = $self->package;
-    my ( $alias ) = ( $package =~ m/([^:]+)$/ );
-    $self->exports_add( $alias, Alias->new( sub { $package }, exported_by => $package ));
+    my ($alias) = ( $package =~ m/([^:]+)$/ );
+    $self->exports_add( $alias, Alias->new( sub { $package }, exported_by => $package ) );
     $self->export_tags_push( 'alias', $alias );
 }
 
 sub is_tag {
     my $self = shift;
-    my ( $name ) = @_;
+    my ($name) = @_;
     return exists $self->export_tags->{$name} ? 1 : 0;
 }
 
 sub is_argument {
     my $self = shift;
-    my ( $name ) = @_;
+    my ($name) = @_;
     return exists $self->arguments->{$name} ? 1 : 0;
 }
 
 sub is_option {
     my $self = shift;
-    my ( $name ) = @_;
+    my ($name) = @_;
     return exists $self->options->{$name} ? 1 : 0;
 }
 
 sub get_ref_from_package {
     my $self = shift;
-    my ( $item ) = @_;
+    my ($item) = @_;
     use Carp qw/confess/;
     confess unless $item;
-    my ( $type, $name ) = ($item =~ m/^([\&\@\%\$]?)(.*)$/);
+    my ( $type, $name ) = ( $item =~ m/^([\&\@\%\$]?)(.*)$/ );
     $type ||= '&';
     my $fullname = "$type$name";
-    my $ref = $self->package . '::' . $name;
+    my $ref      = $self->package . '::' . $name;
 
     no strict 'refs';
-    return( \&{ $ref }, $fullname ) if !$type || $type eq '&';
-    return( \${ $ref }, $fullname ) if $type eq '$';
-    return( \@{ $ref }, $fullname ) if $type eq '@';
-    return( \%{ $ref }, $fullname ) if $type eq '%';
-    croak "'$item' cannot be exported"
+    return ( \&{$ref}, $fullname ) if !$type || $type eq '&';
+    return ( \${$ref}, $fullname ) if $type eq '$';
+    return ( \@{$ref}, $fullname ) if $type eq '@';
+    return ( \%{$ref}, $fullname ) if $type eq '%';
+    croak "'$item' cannot be exported";
 }
 
 sub reexport {
     my $self = shift;
-    my ( $exporter ) = @_;
-    my $meta = $exporter->can( 'export_meta' )
+    my ($exporter) = @_;
+    my $meta =
+          $exporter->can('export_meta')
         ? $exporter->export_meta()
-        : __PACKAGE__->new_from_exporter( $exporter );
-    $self->merge( $meta );
+        : __PACKAGE__->new_from_exporter($exporter);
+    $self->merge($meta);
 }
 
 1;

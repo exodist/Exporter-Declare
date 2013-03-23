@@ -6,7 +6,7 @@ use base 'Exporter::Declare::Export::Sub';
 
 sub inject {
     my $self = shift;
-    my ($class, $name) = @_;
+    my ( $class, $name ) = @_;
 
     $self->SUPER::inject( $class, $name );
 
@@ -14,11 +14,11 @@ sub inject {
 
     my $parser_sub = $self->exported_by->export_meta->parsers_get( $self->parser );
 
-    if ( $parser_sub ) {
+    if ($parser_sub) {
         require Devel::Declare;
         Devel::Declare->setup_for(
             $class,
-            { $name => { const => $parser_sub } }
+            {$name => {const => $parser_sub}}
         );
     }
     else {
