@@ -302,6 +302,9 @@ EXTENDED EXPORT API
         generators, and/or add exports to the -default tag.
 
 MAGIC
+    Please use Exporter::Declare::Magic directly from now on.
+
+  DEPRECATED USAGE OF MAGIC
         use Exporter::Declare '-magic';
 
     This adds Devel::Declare magic to several functions. It also allows you

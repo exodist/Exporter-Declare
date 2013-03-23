@@ -12,7 +12,7 @@ use aliased 'Exporter::Declare::Export::Generator';
 
 BEGIN { Meta->new(__PACKAGE__) }
 
-our $VERSION  = '0.106';
+our $VERSION  = '0.107';
 our @CARP_NOT = qw/
     Exporter::Declare
     Exporter::Declare::Specs
@@ -77,7 +77,11 @@ sub after_import {
     return unless my $args = $specs->config->{'magic'};
     $args = ['-default'] unless ref $args && ref $args eq 'ARRAY';
 
-    require Exporter::Declare::Magic;
+    croak "Exporter::Declare::Magic must be installed seperately for -magic to work"
+        unless eval { require Exporter::Declare::Magic };
+
+    warn "Exporter::Declare -magic is deprecated. Please use Exporter::Declare::Magic directly";
+
     export_to( 'Exporter::Declare::Magic', $caller, @$args );
 }
 
@@ -584,6 +588,10 @@ and/or add exports to the -default tag.
 =back
 
 =head1 MAGIC
+
+Please use L<Exporter::Declare::Magic> directly from now on.
+
+=head2 DEPRECATED USAGE OF MAGIC
 
     use Exporter::Declare '-magic';
 

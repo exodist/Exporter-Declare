@@ -48,9 +48,9 @@ hash_metric exports => (
         for my $item ( keys %$merge ) {
             my $value = $merge->{$item};
             next if $value->isa(Alias);
+            next if $data->{$item};
             $newmerge->{$item} = $value;
         }
-
         $self->default_hash_merge( $data, $metric, $action, $newmerge );
     }
 );

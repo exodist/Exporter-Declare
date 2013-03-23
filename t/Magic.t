@@ -5,8 +5,10 @@ use warnings;
 use Fennec::Lite;
 
 BEGIN {
-    eval "require Devel::Declare::Parser";
-    Test::More->import( skip_all => "Devel::Declare::Parser version >= 0.017 is required for -magic" ) unless $Devel::Declare::Parser::VERSION gt '0.016';
+    require Exporter::Declare::Magic;
+    Test::More->import( skip_all => "Exporter::Declare::Magic 0.107 is required for -magic" )
+        unless eval "require Exporter::Declare::Magic"
+        && $Exporter::Declare::Magic::VERSION >= 0.107;
 }
 
 our $CLASS;
