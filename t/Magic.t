@@ -5,7 +5,6 @@ use warnings;
 use Fennec::Lite;
 
 BEGIN {
-    require Exporter::Declare::Magic;
     my $skip = qq{Exporter::Declare::Magic 0.107 and Devel::Declare::Parser are required for -magic};
     Test::More->import( skip_all => $skip )
         unless eval <<"        EOT";
