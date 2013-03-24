@@ -6,9 +6,13 @@ use Fennec::Lite;
 
 BEGIN {
     require Exporter::Declare::Magic;
-    Test::More->import( skip_all => "Exporter::Declare::Magic 0.107 is required for -magic" )
-        unless eval "require Exporter::Declare::Magic"
-        && $Exporter::Declare::Magic::VERSION >= 0.107;
+    my $skip = qq{Exporter::Declare::Magic 0.107 and Devel::Declare::Parser are required for -magic};
+    Test::More->import( skip_all => $skip )
+        unless eval <<"        EOT";
+            require Devel::Declare::Parser;
+            require Exporter::Declare::Magic;
+            $Exporter::Declare::Magic::VERSION >= 0.107;
+        EOT
 }
 
 our $CLASS;
