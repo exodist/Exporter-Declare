@@ -1,6 +1,6 @@
 package Exporter::Declare;
 use strict;
-use warnings;
+use warnings 'all';
 
 use Carp qw/croak/;
 use Scalar::Util qw/reftype/;
@@ -12,7 +12,7 @@ use aliased 'Exporter::Declare::Export::Generator';
 
 BEGIN { Meta->new(__PACKAGE__) }
 
-our $VERSION  = '0.109';
+our $VERSION  = '0.110';
 our @CARP_NOT = qw/
     Exporter::Declare
     Exporter::Declare::Specs
@@ -216,9 +216,20 @@ sub _add_export {
 sub _find_export_class {
     my $args = shift;
 
-    return shift(@$args)
-        if @$args
-        && eval { $args->[0]->can('export_meta') };
+    # We cannot use $args->[0]->can('export_meta') here, even in eval. The
+    # issue is that in some conditions it will issue the warning 'can() called
+    # as function'.
+    # I cannot reproduce these conditions on my machine, but I do have a test
+    # machine that can reproduce them when Test::MockModule is loaded before
+    # loading an exporter.. This way of doing things fixes the issue on that
+    # machine.
+    if (@$args) {
+        my $arg = $args->[0];
+        no strict 'refs';
+        no warnings 'once';
+        return shift(@$args)
+            if defined *{"$arg\::export_meta"}{CODE};
+    }
 
     return caller(1);
 }
