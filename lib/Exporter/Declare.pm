@@ -12,7 +12,7 @@ use aliased 'Exporter::Declare::Export::Generator';
 
 BEGIN { Meta->new(__PACKAGE__) }
 
-our $VERSION  = '0.110';
+our $VERSION  = '0.111';
 our @CARP_NOT = qw/
     Exporter::Declare
     Exporter::Declare::Specs
@@ -213,8 +213,33 @@ sub _add_export {
     return $params{fullname};
 }
 
+sub _is_exporter_class {
+    my ($name) = @_;
+
+    return 0 unless $name;
+
+    # This is to work around a bug in older versions of UNIVERSAL::can which
+    # would issue a warning about $name->can() when $name was not a valid
+    # package.
+    # This will first verify that $name is a namespace, if not it will return false.
+    # If the namespace defines 'export_meta' we know it is an exporter.
+    # If there is no @ISA array in the namespace we simply return false,
+    # otherwise we fall back to $name->can().
+    {
+        no strict 'refs';
+        return 0 unless keys %{"$name\::"};
+        return 1 if defined *{"$name\::export_meta"}{CODE};
+        return 0 unless @{"$name\::ISA"};
+    }
+
+    return eval { $name->can('export_meta'); 1 };
+}
+
 sub _find_export_class {
     my $args = shift;
+
+    return shift(@$args)
+        if @$args && eval { $args->[0]->can('export_meta') };
 
     # We cannot use $args->[0]->can('export_meta') here, even in eval. The
     # issue is that in some conditions it will issue the warning 'can() called
