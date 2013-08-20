@@ -394,7 +394,7 @@ names, unless prefixed with C<-> or C<:> In which case they may be a tag or an
 option. Exports without a sigil are assumed to be code exports, variable
 exports must be listed with their sigil.
 
-Items prefixed with the C<!> symbol are forcfully excluded, regardless of any
+Items prefixed with the C<!> symbol are forcefully excluded, regardless of any
 listed item that may normally include them. Tags can also be excluded, this
 will effectively exclude everything in the tag.
 
@@ -441,9 +441,9 @@ no argument is provided to import.
 
 =item -alias
 
-Every package has an alias that it can export. This is the last segmant of the
+Every package has an alias that it can export. This is the last segment of the
 packages namespace. IE C<My::Long::Package::Name::Foo> could export the C<Foo()>
-function. These alias functionis simply return the full package name as a
+function. These alias functions simply return the full package name as a
 string, in this case C<'My::Long::Package::Name::Foo'>. This is similar to
 L<aliased>.
 
@@ -523,7 +523,7 @@ You can use all three at once, but this is really a bad idea, documented for com
 The example above will work fine, all the arguments will make it into the
 generator. The only valid reason for this to work is that you may provide
 arguments such as C<-prefix> to a tag that brings in generator(), while also
-desiring to give arguments to generator() independantly.
+desiring to give arguments to generator() independently.
 
 =head1 PRIMARY EXPORT API
 
