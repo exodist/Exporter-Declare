@@ -219,7 +219,7 @@ sub reexport {
 
 =head1 NAME
 
-Exporter::Declare::Meta - The mata object which stoes meta-data for all
+Exporter::Declare::Meta - The mata object which stores meta-data for all
 exporters.
 
 =head1 DESCRIPTION
@@ -288,11 +288,11 @@ Add import options that slurp in the next argument as a value.
 
 =item $bool = $meta->is_option( $name )
 
-Check if the specifed name is an option.
+Check if the specified name is an option.
 
 =item $bool = $meta->is_argument( $name )
 
-Check if the specifed name is an option that takes an argument.
+Check if the specified name is an option that takes an argument.
 
 =item $meta->add_parser( $name, sub { ... })
 
