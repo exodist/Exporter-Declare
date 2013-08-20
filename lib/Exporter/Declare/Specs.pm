@@ -216,7 +216,7 @@ Exporter::Declare::Specs - Import argument parser for Exporter::Declare
 
 =head1 DESCRIPTION
 
-Import arguments cna get complicated. All arguments are assumed to be exports
+Import arguments can get complicated. All arguments are assumed to be exports
 unless they have a - or : prefix. The prefix may denote a tag, a boolean
 option, or an option that takes the next argument as a value. In addition
 almost all these can be negated with the ! prefix.
