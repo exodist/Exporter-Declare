@@ -38,16 +38,10 @@ my $build = $class->new(
         'aliased'       => 0,
         'Meta::Builder' => '0.003',
     },
-    configure_requires => {
-        'Pod::Readme' => 0,
-        'Pod::Select' => 0,
-    },
     build_requires => {
         'Test::Simple'    => 0.88,
         'Fennec::Lite'    => '0.004',
         'Test::Exception' => '0.29',
-        'Pod::Readme' => 0,
-        'Pod::Select' => 0,
     },
     meta_merge => {
         resources => {
