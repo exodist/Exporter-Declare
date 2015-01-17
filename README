@@ -117,18 +117,18 @@ SYNOPSIS
 IMPORT INTERFACE
     Importing from a package that uses Exporter::Declare will be familiar to
     anyone who has imported from modules before. Arguments are all assumed
-    to be export names, unless prefixed with "-" or ":" In which case they
+    to be export names, unless prefixed with `-' or `:' In which case they
     may be a tag or an option. Exports without a sigil are assumed to be
     code exports, variable exports must be listed with their sigil.
 
-    Items prefixed with the "!" symbol are forcfully excluded, regardless of
-    any listed item that may normally include them. Tags can also be
+    Items prefixed with the `!' symbol are forcefully excluded, regardless
+    of any listed item that may normally include them. Tags can also be
     excluded, this will effectively exclude everything in the tag.
 
     Tags are simply lists of exports, the exporting class may define any
     number of tags. Exporter::Declare also has the concept of options, they
     have the same syntax as tags. Options may be boolean or argument based.
-    Boolean options are actually 3 value, undef, false "!", or true.
+    Boolean options are actually 3 value, undef, false `!', or true.
     Argument based options will grab the next value in the arguments list as
     their own, regardless of what type of value it is.
 
@@ -143,15 +143,15 @@ IMPORT INTERFACE
   SELECTING ITEMS TO IMPORT
     Exports can be subs, or package variables (scalar, hash, array). For
     subs simply ask for the sub by name, you may optionally prefix the subs
-    name with the sub sigil "&". For variables list the variable name along
-    with its sigil "$, %, or @".
+    name with the sub sigil `&'. For variables list the variable name along
+    with its sigil `$, %, or @'.
 
         use Some::Exporter qw/ somesub $somescalar %somehash @somearray /;
 
   TAGS
     Every exporter automatically has the following 3 tags, in addition they
     may define any number of custom tags. Tags can be specified by their
-    name prefixed by either "-" or ":".
+    name prefixed by either `-' or `:'.
 
     -all
         This tag may be used to import everything the exporter provides.
@@ -162,10 +162,10 @@ IMPORT INTERFACE
 
     -alias
         Every package has an alias that it can export. This is the last
-        segmant of the packages namespace. IE "My::Long::Package::Name::Foo"
-        could export the "Foo()" function. These alias functionis simply
+        segment of the packages namespace. IE `My::Long::Package::Name::Foo'
+        could export the `Foo()' function. These alias functions simply
         return the full package name as a string, in this case
-        'My::Long::Package::Name::Foo'. This is similar to aliased.
+        `'My::Long::Package::Name::Foo''. This is similar to aliased.
 
         The -alias tag is a shortcut so that you do not need to think about
         what the alias name would be when adding it to the import arguments.
@@ -178,18 +178,18 @@ IMPORT INTERFACE
     You can prefix, suffix, or completely rename the items you import.
     Whenever an item is followed by a hash in the import list, that hash
     will be used for configuration. Configuration items always start with a
-    dash "-".
+    dash `-'.
 
     The 3 available configuration options that effect import names are
-    "-prefix", "-suffix", and "-as". If "-as" is seen it will be used as is.
+    `-prefix', `-suffix', and `-as'. If `-as' is seen it will be used as is.
     If prefix or suffix are seen they will be attached to the original name
     (unless -as is present in which case they are ignored).
 
         use Some::Exporter subA => { -as => 'DoThing' },
                            subB => { -prefix => 'my_', -suffix => '_ok' };
 
-    The example above will import "subA()" under the name "DoThing()". It
-    will also import "subB()" under the name "my_subB_ok()".
+    The example above will import `subA()' under the name `DoThing()'. It
+    will also import `subB()' under the name `my_subB_ok()'.
 
     You may als specify a prefix and/or suffix for tags. The following
     example will import all the default exports with 'my_' prefixed to each
@@ -239,8 +239,8 @@ IMPORT INTERFACE
 
     The example above will work fine, all the arguments will make it into
     the generator. The only valid reason for this to work is that you may
-    provide arguments such as "-prefix" to a tag that brings in generator(),
-    while also desiring to give arguments to generator() independantly.
+    provide arguments such as `-prefix' to a tag that brings in generator(),
+    while also desiring to give arguments to generator() independently.
 
 PRIMARY EXPORT API
     With the exception of import(), all the following work equally well as
