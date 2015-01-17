@@ -3,7 +3,30 @@ use strict;
 use warnings;
 use Module::Build;
 
-my $build = Module::Build->new(
+#This part (creating a subclass) helps generating
+# a github-friendly readme.pod file alongside with
+# the traditional readme file with no markdown.
+my $class = Module::Build->subclass(
+    class => 'My::Builder',
+    code => q{
+        sub ACTION_docs {
+            use Pod::Readme;
+            use Pod::Select;
+
+            my $self = shift;
+
+            podselect({ -output => 'README.pod' },
+                'lib/Exporter/Declare.pm');
+
+            my $parser = Pod::Readme->new();
+            $parser->parse_from_file('README.pod', 'README');
+
+            return $self->SUPER::ACTION_docs;
+        }
+    }
+);
+
+my $build = $class->new(
     module_name => 'Exporter::Declare',
     license     => 'perl',
     dist_author => 'Chad Granum <exodist7@gmail.com>',
