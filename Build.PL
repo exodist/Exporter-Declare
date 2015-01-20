@@ -10,12 +10,12 @@ my $class = Module::Build->subclass(
     class => 'My::Builder',
     code => q{
         sub ACTION_docs {
-            use Pod::Readme;
-            use Pod::Select;
+            require Pod::Readme;
+            require Pod::Select;
 
             my $self = shift;
 
-            podselect({ -output => 'README.pod' },
+            Pod::Select::podselect({ -output => 'README.pod' },
                 'lib/Exporter/Declare.pm');
 
             my $parser = Pod::Readme->new();
