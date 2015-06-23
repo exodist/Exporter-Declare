@@ -74,7 +74,7 @@ SYNOPSIS
         # You can create a function to mangle the arguments before they are
         # parsed into a Exporter::Declare::Spec object.
         sub alter_import_args {
-           my ($class, $args) = @_;
+           my ($class, $importer, $args) = @_;
     
            # fiddle with args before importing routines are called
            @$args = grep { !/^skip_/ } @$args
@@ -374,7 +374,7 @@ INTERNAL API
 META CLASS
 
     All exporters have a meta class, the only way to get the meta object is
-    to call the exporter_meta() method on the class/object that is an
+    to call the export_meta() method on the class/object that is an
     exporter. Any class that uses Exporter::Declare gets this method, and a
     meta-object.
 
