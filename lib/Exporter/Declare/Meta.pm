@@ -267,15 +267,15 @@ item name with sigil, assumed to be sub when sigil is missing.
 Add @items to the specified tag. Tag will be created if it does not already
 exist. $name should be the tag name B<WITHOUT> -/: prefix.
 
+=item @list = $meta->export_tags_get( $name )
+
+Get the list of items associated with the specified tag.  $name should be the
+tag name B<WITHOUT> -/: prefix.
+
 =item $bool = $meta->is_tag( $name )
 
 Check if a tag with the given name exists.  $name should be the tag name
 B<WITHOUT> -/: prefix.
-
-=item @list = $meta->get_tag( $name )
-
-Get the list of items associated with the specified tag.  $name should be the
-tag name B<WITHOUT> -/: prefix.
 
 =item $meta->add_options( @names )
 

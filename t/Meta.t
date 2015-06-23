@@ -37,6 +37,7 @@ tests tags => sub {
     );
     is_deeply( [$meta->export_tags_get('all')], [ '&FakeTagPackage' ], ':all only has alias' );
     is_deeply( [$meta->export_tags_get('default')], [], ':default is empty list' );
+    is_deeply( [$meta->get_tag('foooo')], [], "Nothing" );
 
     $meta->export_tags_push( 'a', qw/a b c d/ );
     is_deeply( [$meta->export_tags_get('a')], [qw/a b c d/], "Added tag" );
