@@ -28,6 +28,26 @@ tests construction => sub {
     is_deeply( $meta->arguments, { suffix => 1, prefix => 1 }, "Got arguments list" );
 };
 
+tests options => sub {
+    my $meta = $CLASS->new('FakeOptionPackage');
+    $meta->options_add($_) for qw/a b c/;
+    is_deeply(
+        [sort $meta->options_list],
+        [qw/a b c/],
+        "Got all options"
+    );
+};
+
+tests arguments => sub {
+    my $meta = $CLASS->new('FakeArgumentsPackage');
+    $meta->arguments_add($_) for qw/a b c/;
+    is_deeply(
+        [sort $meta->arguments_list],
+        [sort qw/a b c prefix suffix/],
+        "Got all arguments"
+    );
+};
+
 tests tags => sub {
     my $meta = $CLASS->new('FakeTagPackage');
     is_deeply(
@@ -37,7 +57,6 @@ tests tags => sub {
     );
     is_deeply( [$meta->export_tags_get('all')], [ '&FakeTagPackage' ], ':all only has alias' );
     is_deeply( [$meta->export_tags_get('default')], [], ':default is empty list' );
-    is_deeply( [$meta->get_tag('foooo')], [], "Nothing" );
 
     $meta->export_tags_push( 'a', qw/a b c d/ );
     is_deeply( [$meta->export_tags_get('a')], [qw/a b c d/], "Added tag" );
@@ -48,6 +67,17 @@ tests tags => sub {
 
     $meta->export_tags_push( 'default', qw/a b c d/ );
     is_deeply( [$meta->export_tags_get('default')], [qw/a b c d/], "updated default" );
+
+    is_deeply(
+        [sort $meta->export_tags_list],
+        [sort
+            'a',
+            'alias',
+            'all',
+            'default'
+        ],
+        "Got list of all tags"
+    );
 };
 
 tests exports => sub {
@@ -117,6 +147,19 @@ tests exports => sub {
     throws_ok { $meta->exports_get( ':xxx' )}
         qr/exports_get\(\) does not accept a tag as an argument/,
         "Can't import whats not exported";
+
+    is_deeply(
+        [sort $meta->exports_list],
+        [sort
+            '$scalar',
+            '@array',
+            '%hash',
+            '&code_with_sigil',
+            '&FakeExportPackage',
+            '&code_no_sigil'
+        ],
+        "Got a list of all exports"
+    );
 };
 
 {

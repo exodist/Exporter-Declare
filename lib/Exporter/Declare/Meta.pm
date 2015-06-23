@@ -52,7 +52,12 @@ hash_metric exports => (
             $newmerge->{$item} = $value;
         }
         $self->default_hash_merge( $data, $metric, $action, $newmerge );
-    }
+    },
+    list => sub {
+        my $self = shift;
+        my ($data) = @_;
+        return keys %$data;
+    },
 );
 
 hash_metric options => (
@@ -66,6 +71,11 @@ hash_metric options => (
             if $self->arguments_has($item);
 
         $self->default_hash_add( $data, $metric, $action, $item, 1 );
+    },
+    list => sub {
+        my $self = shift;
+        my ($data) = @_;
+        return keys %$data;
     },
 );
 
@@ -88,7 +98,12 @@ hash_metric arguments => (
         delete $newmerge->{suffix};
         delete $newmerge->{prefix};
         $self->default_hash_merge( $data, $metric, $action, $newmerge );
-    }
+    },
+    list => sub {
+        my $self = shift;
+        my ($data) = @_;
+        return keys %$data;
+    },
 );
 
 lists_metric export_tags => (
@@ -122,7 +137,12 @@ lists_metric export_tags => (
         }
 
         $self->default_list_merge( $data, $metric, $action, $newmerge );
-    }
+    },
+    list => sub {
+        my $self = shift;
+        my ($data) = @_;
+        return keys %$data;
+    },
 );
 
 sub new {
@@ -272,17 +292,23 @@ exist. $name should be the tag name B<WITHOUT> -/: prefix.
 Get the list of items associated with the specified tag.  $name should be the
 tag name B<WITHOUT> -/: prefix.
 
+=item @list = $meta->export_tags_list()
+
+Get a list of all export tags.
+
 =item $bool = $meta->is_tag( $name )
 
 Check if a tag with the given name exists.  $name should be the tag name
 B<WITHOUT> -/: prefix.
 
-=item $meta->add_options( @names )
+=item $meta->options_add( $name )
 
 Add import options by name. These will be boolean options that take no
 arguments.
 
-=item $meta->add_arguments( @names )
+=item my @list = $meta->options_list()
+
+=item $meta->arguments_add( $name )
 
 Add import options that slurp in the next argument as a value.
 
