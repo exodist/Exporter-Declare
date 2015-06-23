@@ -219,7 +219,7 @@ sub reexport {
 
 =head1 NAME
 
-Exporter::Declare::Meta - The mata object which stores meta-data for all
+Exporter::Declare::Meta - The meta object which stores meta-data for all
 exporters.
 
 =head1 DESCRIPTION
