@@ -332,7 +332,7 @@ system allows for top-notch introspection.
     # You can create a function to mangle the arguments before they are
     # parsed into a Exporter::Declare::Spec object.
     sub alter_import_args {
-       my ($class, $args) = @_;
+       my ($class, $importer, $args) = @_;
 
        # fiddle with args before importing routines are called
        @$args = grep { !/^skip_/ } @$args
