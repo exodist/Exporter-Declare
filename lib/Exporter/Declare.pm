@@ -638,7 +638,7 @@ their own (See L<Exporter::Declare::Export>).
 =head1 META CLASS
 
 All exporters have a meta class, the only way to get the meta object is to call
-the exporter_meta() method on the class/object that is an exporter. Any class
+the export_meta() method on the class/object that is an exporter. Any class
 that uses Exporter::Declare gets this method, and a meta-object.
 
 =head1 AUTHORS
